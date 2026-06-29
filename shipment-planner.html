@@ -141,6 +141,19 @@
       transition: border-color 0.2s, background 0.2s;
     }
     .drop-zone:hover, .drop-zone.drag-over { border-color: #00bfff; background: #0d1f2a; }
+    .drop-zone-locked { cursor: not-allowed; }
+    .drop-zone.drop-zone-locked:hover { border-color: #2a2a2a; background: #161616; }
+    .drop-zone-locked h2 { color: #555; }
+    .drop-zone-locked p  { color: #ff8c00; font-size: 0.8rem; }
+    @keyframes dzWarn {
+      0%   { border-color: #2a2a2a; transform: translateX(0); }
+      15%  { border-color: #ff8c00; transform: translateX(-6px); }
+      35%  { border-color: #ff8c00; transform: translateX( 6px); }
+      55%  { border-color: #ff8c00; transform: translateX(-4px); }
+      75%  { border-color: #ff8c00; transform: translateX( 4px); }
+      100% { border-color: #2a2a2a; transform: translateX(0); }
+    }
+    .drop-zone-warn { animation: dzWarn 0.45s ease; }
     .drop-zone-icon { margin-bottom: 18px; display: flex; justify-content: center; }
     .drop-zone h2 { font-size: 1rem; font-weight: 600; color: #aaa; margin-bottom: 6px; }
     .drop-zone p { font-size: 0.82rem; color: #444; }
@@ -344,6 +357,33 @@
     .lp-tool-btn:hover { background: #1e1e1e; color: #ccc; }
     .lp-tool-btn.copied { color: #8ade28; border-color: rgba(138,222,40,0.4); animation: none; }
 
+    .shipment-num-input {
+      background: none; border: none; border-bottom: 1px dashed #444;
+      color: #fff; font-size: 0.9rem; font-weight: 700;
+      padding: 0; min-width: 1ch; font-family: inherit;
+      cursor: text; -moz-appearance: textfield; appearance: textfield;
+    }
+    .shipment-num-input::-webkit-outer-spin-button,
+    .shipment-num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .shipment-num-input:focus { outline: none; border-bottom-color: #00bfff; }
+
+    #fieldsOverlay {
+      display: none; position: absolute; inset: 0; z-index: 10;
+      background: rgba(17,17,17,0.92);
+      flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    }
+    .fields-overlay-box {
+      border: 1px solid rgba(255,140,0,0.5); border-radius: 8px;
+      background: rgba(255,140,0,0.06); padding: 24px 40px; text-align: center;
+    }
+    .fields-overlay-title {
+      font-size: 1.1rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.14em; color: #ff8c00;
+    }
+    #fieldsOverlayMissing {
+      font-size: 0.78rem; color: #888f91; margin-top: 10px;
+    }
+
     .lp-error-box {
       background: rgba(255,107,107,0.07); border: 1px solid rgba(255,107,107,0.25);
       border-radius: 7px; padding: 13px; color: #ff6b6b; font-size: 0.76rem;
@@ -377,38 +417,36 @@
   </header>
 
   <div id="topPanel" style="display:flex; flex-direction:column; gap:0;">
-    <div id="topPanelMain" style="display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:0;">
+    <div id="topPanelMain" style="padding-bottom:0;">
     <div style="display:flex; flex-direction:row; align-items:center; gap:24px; flex-wrap:wrap;">
-    <div style="display:flex; flex-direction:column; gap:6px;">
       <div class="so-row">
         <span class="so-label">Sales Order #</span>
         <input type="text" id="soInput" maxlength="6" placeholder="000000" inputmode="numeric"
                oninput="this.value=this.value.replace(/\D/g,'')">
       </div>
-      <button id="recentBtn" onclick="toggleRecentPanel()" style="align-self:flex-start;">Recently Viewed</button>
-    </div>
-    <div class="so-row">
-      <span class="so-label">Customer PO #</span>
-      <input type="text" id="poInput" placeholder="—"
-             style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:1.1rem; font-weight:700; padding:7px 14px; width:150px; text-align:center; letter-spacing:0.08em; font-family:'Lexend',sans-serif;">
-      <style>#poInput:focus { outline:none; border-color:#8ade28; } #poInput::placeholder { color:#2e2e2e; font-weight:300; }</style>
-    </div>
-    <div class="so-row">
-      <span class="so-label">Ship To</span>
-      <select id="shipToInput" style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:0.9rem; font-weight:600; padding:7px 14px; min-width:220px; font-family:'Lexend',sans-serif; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%23888f91%22 d=%22M6 8L1 3h10z%22/></svg>'); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;">
-        <option value="" style="color:#888f91;">— Select address —</option>
-        <option value="4800 ROBERTS RD">4800 ROBERTS RD</option>
-        <option value="1501 E BARDIN RD">1501 E BARDIN RD</option>
-        <option value="255 S MCCARRAN BLVD">255 S MCCARRAN BLVD</option>
-        <option value="14 PROSPECT DR">14 PROSPECT DR</option>
-        <option value="730 KING GEORGE BLVD">730 KING GEORGE BLVD</option>
-      </select>
-      <style>#shipToInput:focus { outline:none; border-color:#00bfff; } #shipToInput option { background:#1e1e1e; color:#fff; }</style>
-    </div>
-    <div>
+      <div class="so-row">
+        <span class="so-label">Customer PO #</span>
+        <input type="text" id="poInput" placeholder="—"
+               style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:1.1rem; font-weight:700; padding:7px 14px; width:150px; text-align:center; letter-spacing:0.08em; font-family:'Lexend',sans-serif;">
+        <style>#poInput:focus { outline:none; border-color:#8ade28; } #poInput::placeholder { color:#2e2e2e; font-weight:300; }</style>
+      </div>
+      <div class="so-row">
+        <span class="so-label">Ship To</span>
+        <select id="shipToInput" style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:0.9rem; font-weight:600; padding:7px 14px; min-width:220px; font-family:'Lexend',sans-serif; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%23888f91%22 d=%22M6 8L1 3h10z%22/></svg>'); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;">
+          <option value="" style="color:#888f91;">— Select address —</option>
+          <option value="4800 ROBERTS RD">4800 ROBERTS RD</option>
+          <option value="1501 E BARDIN RD">1501 E BARDIN RD</option>
+          <option value="255 S MCCARRAN BLVD">255 S MCCARRAN BLVD</option>
+          <option value="14 PROSPECT DR">14 PROSPECT DR</option>
+          <option value="730 KING GEORGE BLVD">730 KING GEORGE BLVD</option>
+        </select>
+        <style>#shipToInput:focus { outline:none; border-color:#00bfff; } #shipToInput option { background:#1e1e1e; color:#fff; }</style>
+      </div>
       <button id="copyAllBtn" onclick="copyAll()">Copy All Shipments</button>
     </div>
-    </div><!-- end inputs row -->
+    <div style="margin-top:8px;">
+      <button id="recentBtn" onclick="toggleRecentPanel()">Recently Viewed</button>
+    </div>
     </div><!-- end topPanelMain -->
     <div id="summaryBar" style="margin-top:14px;"></div>
   </div>
@@ -416,6 +454,14 @@
 
 <!-- ── Scrollable content ─────────────────────────────────── -->
 <div class="content-row">
+
+<div id="fieldsOverlay">
+  <div class="fields-overlay-box">
+    <div class="fields-overlay-title">User Must Fill Top Fields</div>
+    <div id="fieldsOverlayMissing"></div>
+  </div>
+</div>
+
 <div id="mainContent">
   <div class="container">
 
@@ -455,7 +501,7 @@
         </svg>
       </div>
       <h2>Drop your sales order CSV here</h2>
-      <p>or click to browse</p>
+      <p id="dropZoneMsg">or click to browse</p>
       <input type="file" id="fileInput" accept=".csv">
     </div>
 
@@ -697,7 +743,7 @@ function renderShipment(rows, shipmentNum, isAuto) {
   const kitLines  = rows.filter(r => r.isKit).length;
   const gageLines = rows.filter(r => r.isGage).length;
   const soNum     = (document.getElementById('soInput').value.trim() || '______');
-  const title     = `${soNum}-${shipmentNum}`;
+  const numWidth  = String(shipmentNum).length + 'ch';
   const hdrClass  = isAuto ? 'card-header-auto' : 'card-header-std';
   const valClass  = isAuto ? 'val-auto' : 'val-std';
   const totClass  = isAuto ? 'val-total-auto' : 'val-total-std';
@@ -743,7 +789,7 @@ function renderShipment(rows, shipmentNum, isAuto) {
   return `
   <div class="shipment-card">
     <div class="card-header ${hdrClass}" onclick="toggleCard('${id}')">
-      <div class="card-title">${badge} ${escHtml(title)}</div>
+      <div class="card-title">${badge} ${escHtml(soNum)}-<input class="shipment-num-input" type="number" min="1" value="${shipmentNum}" data-prev="${shipmentNum}" style="width:${numWidth}" onclick="event.stopPropagation()" oninput="this.style.width=(this.value.length||1)+'ch'" onchange="onShipmentNumChange(this)"></div>
       <div class="card-right">
         <div class="card-meta">
           <div class="meta-item">
@@ -785,6 +831,27 @@ function renderShipment(rows, shipmentNum, isAuto) {
       </table>
     </div>
   </div>`;
+}
+
+function onShipmentNumChange(input) {
+  const allInputs = Array.from(document.querySelectorAll('.shipment-num-input'));
+  const idx    = allInputs.indexOf(input);
+  const newVal = parseInt(input.value) || 1;
+  const oldVal = parseInt(input.dataset.prev) || 1;
+  const offset = newVal - oldVal;
+
+  input.value        = String(newVal);
+  input.dataset.prev = String(newVal);
+  input.style.width  = String(newVal).length + 'ch';
+
+  if (offset === 0) return;
+
+  for (let i = idx + 1; i < allInputs.length; i++) {
+    const updated = Math.max(1, (parseInt(allInputs[i].value) || 1) + offset);
+    allInputs[i].value          = String(updated);
+    allInputs[i].dataset.prev   = String(updated);
+    allInputs[i].style.width    = String(updated).length + 'ch';
+  }
 }
 
 function escHtml(str) {
@@ -911,6 +978,11 @@ function resetTool() {
   document.getElementById('summaryBar').style.display = 'none';
   document.getElementById('summaryBar').innerHTML = '';
   document.getElementById('autobaggerSection').style.display = '';
+  document.getElementById('soInput').value = '';
+  document.getElementById('poInput').value = '';
+  document.getElementById('shipToInput').value = '';
+  _loadedCSV = null;
+  document.getElementById('fieldsOverlay').style.display = 'none';
   const lbl = document.getElementById('stdSectionLabel');
   lbl.textContent = 'Standard Shipments'; lbl.className = 'section-label color-std';
   resetLP();
@@ -1021,6 +1093,42 @@ document.addEventListener('click', e => {
 
 updateRecentBtn();
 
+// ── State ─────────────────────────────────────────────────────────────────────
+let _loadedCSV = null;
+
+// ── Field gate overlay ────────────────────────────────────────────────────────
+function fieldsReady() {
+  const so   = document.getElementById('soInput').value.trim();
+  const po   = document.getElementById('poInput').value.trim();
+  const ship = document.getElementById('shipToInput').value;
+  return !!(so && po && ship);
+}
+
+function updateOverlay() {
+  const overlay = document.getElementById('fieldsOverlay');
+  if (!overlay) return;
+  const ready = fieldsReady();
+  if (!_loadedCSV || ready) {
+    // If overlay was actively showing and fields just became complete, re-process
+    // so card titles and TSV rows reflect the now-filled field values.
+    if (_loadedCSV && ready && overlay.style.display === 'flex') {
+      processCSV(_loadedCSV);
+    }
+    overlay.style.display = 'none';
+  } else {
+    overlay.style.display = 'flex';
+    const missing = [];
+    if (!document.getElementById('soInput').value.trim()) missing.push('Sales Order #');
+    if (!document.getElementById('poInput').value.trim()) missing.push('Customer PO #');
+    if (!document.getElementById('shipToInput').value)    missing.push('Ship To');
+    document.getElementById('fieldsOverlayMissing').textContent = 'Missing: ' + missing.join(', ');
+  }
+}
+
+document.getElementById('soInput').addEventListener('input', updateOverlay);
+document.getElementById('poInput').addEventListener('input', updateOverlay);
+document.getElementById('shipToInput').addEventListener('change', updateOverlay);
+
 // ── File Handling ─────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
@@ -1036,7 +1144,12 @@ dropZone.addEventListener('drop', e => {
 
 function readFile(file) {
   const reader = new FileReader();
-  reader.onload = e => { const csv = e.target.result; processCSV(csv); saveToRecent(csv); };
+  reader.onload = e => {
+    _loadedCSV = e.target.result;
+    saveToRecent(_loadedCSV);
+    processCSV(_loadedCSV);
+    updateOverlay();
+  };
   reader.readAsText(file);
 }
 
