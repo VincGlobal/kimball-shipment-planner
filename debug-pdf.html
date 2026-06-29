@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>PDF Debug</title></head>
+<body style="background:#111;color:#ccc;font-family:monospace;padding:20px;">
+<input type="file" id="f" accept=".pdf" style="margin-bottom:16px;display:block;">
+<pre id="out" style="white-space:pre-wrap;font-size:12px;"></pre>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+document.getElementById('f').onchange = async function(e) {
+  const file = e.target.files[0];
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data: ab}).promise;
+  let out = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const all = tc.items.map(i => i.str).join(' ');
+    out += '=== PAGE ' + p + ' ===\n';
+    out += 'Has "Picking Slip": ' + all.includes('Picking Slip') + '\n';
+    out += 'Has "Item Components": ' + all.includes('Item Components') + '\n';
+    out += 'Has "Lot Details": ' + all.includes('Lot Details') + '\n\n';
+    // Group rows by y
+    const items = tc.items.filter(i => i.str.trim());
+    items.sort((a,b) => { const dy = b.transform[5]-a.transform[5]; return Math.abs(dy)<=3 ? a.transform[4]-b.transform[4] : dy; });
+    let rows = [], cur = null;
+    for (const item of items) {
+      const y = item.transform[5];
+      if (!cur || Math.abs(y - cur.y) > 3) { cur = {y, items:[item]}; rows.push(cur); }
+      else cur.items.push(item);
+    }
+    rows.forEach(r => {
+      const strs = r.items.map(i => i.str.trim()).filter(s=>s);
+      out += '[y=' + Math.round(r.y) + '] ' + JSON.stringify(strs) + '\n';
+    });
+    out += '\n';
+  }
+  document.getElementById('out').textContent = out;
+};
+</script>
+</body></html>

@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shipment Planner — Global O-Ring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #111111; color: #ffffff;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Border pulse animation ─────────────────────────── */
+    @keyframes borderPulse {
+      0%, 100% { border-color: rgba(0,191,255,0.45); }
+      50%       { border-color: rgba(0,191,255,0.85); }
+    }
+    @keyframes borderLeftPulse {
+      0%, 100% { border-left-color: rgba(0,191,255,0.45); }
+      50%       { border-left-color: rgba(0,191,255,0.85); }
+    }
+
+    /* ── Fixed top section ───────────────────────────────── */
+    .top-fixed { flex-shrink: 0; position: relative; z-index: 1; }
+
+    header {
+      background: #1a1a1a; border-bottom: 1px solid rgba(0,191,255,0.45);
+      padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-breadcrumb { font-size: 0.72rem; color: #888f91; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .header-breadcrumb span { color: #00bfff; }
+    header h1 { font-size: 1.3rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+    #topPanelToggle {
+      background: none; border: none; color: #444; cursor: pointer;
+      font-size: 0.75rem; padding: 2px 6px; margin-left: 10px;
+      transition: color 0.15s; vertical-align: middle; line-height: 1;
+    }
+    #topPanelToggle:hover { color: #888f91; }
+    #loadNewBtn {
+      display: none; background: #222; color: #888f91; border: 1px solid #2e2e2e;
+      padding: 7px 16px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    }
+    #loadNewBtn:hover { background: #2a2a2a; color: #ccc; }
+
+    #recentBtn {
+      display: none; background: #1a1a1a; color: #888f91; border: 1px solid rgba(0,191,255,0.45);
+      padding: 7px 16px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em; position: relative;
+      animation: borderPulse 3s ease-in-out infinite;
+    }
+    #recentBtn:hover { background: #222; color: #ccc; }
+    #recentBtn.active { color: #00bfff; }
+
+    /* ── Recently Viewed Panel ───────────────────────────────── */
+    #recentPanel {
+      display: none;
+      position: fixed; top: 120px; left: 32px; z-index: 999;
+      background: #1a1a1a; border: 1px solid rgba(0,191,255,0.55); border-radius: 8px;
+      width: 320px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      overflow: hidden; max-height: calc(100vh - 160px);
+      display: none; flex-direction: column;
+    }
+    #recentPanel.open { display: flex; }
+    #recentList { overflow-y: auto; flex: 1; }
+    .recent-panel-header {
+      padding: 12px 16px; border-bottom: 1px solid rgba(0,191,255,0.45);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .recent-panel-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #888f91; }
+    .recent-panel-close { background: none; border: none; color: #444; cursor: pointer; font-size: 1rem; padding: 0 2px; line-height: 1; }
+    .recent-panel-close:hover { color: #aaa; }
+    .recent-item {
+      padding: 13px 16px; cursor: pointer; border-bottom: 1px solid rgba(0,191,255,0.55);
+      transition: background 0.12s;
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-item:hover { background: #222; }
+    .recent-so { font-size: 1rem; font-weight: 700; color: #fff; font-family: 'Lexend', sans-serif; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .recent-meta { font-size: 0.78rem; color: #888f91; display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+    .recent-date { font-size: 0.7rem; color: #444; }
+    .recent-empty { padding: 20px 16px; font-size: 0.82rem; color: #444; text-align: center; }
+    #copyAllBtn {
+      display: none; background: #1a2a1a; color: #8ade28; border: 1px solid rgba(138,222,40,0.35);
+      padding: 7px 18px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    #copyAllBtn:hover { background: #223322; color: #a8f048; }
+    #copyAllBtn.copied { background: #0f1f0f; color: #8ade28; border-color: #8ade28; }
+
+    /* ── Top panel ───────────────────────────────────────── */
+    #topPanel {
+      background: #161616; border-bottom: 1px solid rgba(0,191,255,0.45);
+      padding: 16px 32px; display: flex; flex-direction: column; gap: 16px;
+    }
+
+    /* SO input row */
+    .so-row { display: flex; align-items: center; gap: 12px; }
+    .so-label { font-size: 0.85rem; color: #888f91; text-transform: uppercase; letter-spacing: 0.09em; white-space: nowrap; }
+    #soInput {
+      background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 5px;
+      color: #fff; font-size: 1.1rem; font-weight: 700; padding: 7px 14px;
+      width: 150px; text-align: center; letter-spacing: 0.12em;
+      font-family: 'Lexend', sans-serif;
+    }
+    #soInput:focus { outline: none; border-color: #00bfff; }
+    #soInput::placeholder { color: #2e2e2e; font-weight: 300; letter-spacing: 0.05em; font-size: 0.9rem; }
+
+    /* Summary bar */
+    #summaryBar { display: none; }
+    .summary { display: flex; gap: 10px; flex-wrap: wrap; }
+    .summary-card {
+      background: #1a1a1a; border: 1px solid rgba(0,191,255,0.45); border-radius: 7px;
+      padding: 13px 18px; flex: 1; min-width: 110px; animation: borderPulse 3s ease-in-out infinite;
+    }
+    .summary-card .s-label {
+      font-size: 0.72rem; color: #888f91; text-transform: uppercase;
+      letter-spacing: 0.09em; margin-bottom: 6px;
+    }
+    .summary-card .s-value { font-size: 1.55rem; font-weight: 700; }
+    .summary-card:nth-child(2) { animation-delay: 0.5s; }
+    .summary-card:nth-child(3) { animation-delay: 1.0s; }
+    .summary-card:nth-child(4) { animation-delay: 1.5s; }
+    .summary-card:nth-child(5) { animation-delay: 2.0s; }
+    #locationPanel { animation-delay: 0.75s; }
+
+    /* ── Scrollable content ──────────────────────────────── */
+    #mainContent { flex: 1; overflow-y: auto; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 28px 32px 60px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #2a2a2a; border-radius: 12px; background: #161616;
+      padding: 22px 32px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: #00bfff; background: #0d1f2a; }
+    .drop-zone-icon { margin-bottom: 18px; display: flex; justify-content: center; }
+    .drop-zone h2 { font-size: 1rem; font-weight: 600; color: #aaa; margin-bottom: 6px; }
+    .drop-zone p { font-size: 0.82rem; color: #444; }
+    .drop-zone input[type=file] { display: none; }
+
+    /* ── Section dividers ────────────────────────────────── */
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; margin-top: 6px; }
+    .section-header hr { flex: 1; border: none; border-top: 1px solid rgba(0,191,255,0.4); }
+    .section-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+    .color-auto { color: #00bfff; }
+    .color-std  { color: #8ade28; }
+
+    /* ── Shipment grid ───────────────────────────────────── */
+    .shipments-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 36px; }
+
+    /* ── Shipment card ───────────────────────────────────── */
+    .shipment-card { background: #1a1a1a; border: 1px solid rgba(0,191,255,0.45); border-radius: 7px; overflow: hidden; animation: borderPulse 3s ease-in-out infinite; }
+
+    .card-header { padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+    .card-header-auto { border-left: 3px solid #00bfff; }
+    .card-header-std  { border-left: 3px solid #8ade28; }
+    .card-header:hover { background: #202020; }
+
+    .card-title { font-size: 0.9rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+
+    .card-right { display: flex; align-items: center; gap: 14px; }
+    .card-meta { display: flex; gap: 22px; }
+    .meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .meta-val { font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .meta-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #888f91; }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .badge-auto { background: rgba(0,191,255,0.22); color: #00bfff; border: 1px solid rgba(0,191,255,0.22); }
+    .badge-std  { background: rgba(138,222,40,0.1); color: #8ade28; border: 1px solid rgba(138,222,40,0.22); }
+    .badge-kit  { background: rgba(0,191,255,0.3); color: #00bfff; border: 1px solid rgba(0,191,255,0.2);
+                  font-size: 0.58rem; padding: 1px 5px; vertical-align: middle; margin-left: 6px; }
+    .val-kit    { color: #00bfff; font-weight: 700; }
+    .badge-gage { background: rgba(255,170,0,0.08); color: #ffaa00; border: 1px solid rgba(255,170,0,0.2);
+                  font-size: 0.58rem; padding: 1px 5px; vertical-align: middle; margin-left: 6px; }
+    .val-gage   { color: #ffaa00; font-weight: 700; }
+
+    .chevron { font-size: 0.75rem; color: #333; flex-shrink: 0; }
+
+    /* Copy button */
+    .copy-btn {
+      background: #1e1e1e; border: 1px solid #2e2e2e; color: #888f91;
+      border-radius: 4px; padding: 5px 11px; cursor: pointer;
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+      white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+    }
+    .copy-btn:hover { background: #2a2a2a; color: #fff; border-color: #444; }
+    .copy-btn.copied { background: #0f1f0f; color: #8ade28; border-color: rgba(138,222,40,0.4); }
+
+    /* Item copy button */
+    .item-copy-btn {
+      background: none; border: 1px solid rgba(138,222,40,0.25); color: #8ade28;
+      border-radius: 3px; padding: 1px 5px; cursor: pointer; font-size: 0.68rem;
+      margin-left: 8px; opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+      vertical-align: middle; line-height: 1.4;
+    }
+    .item-copy-btn:hover { opacity: 1; background: rgba(138,222,40,0.08); }
+    .item-copy-btn.copied { opacity: 1; border-color: #8ade28; }
+
+    /* ── Table ───────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead th {
+      background: #141414; padding: 8px 18px; text-align: left;
+      font-weight: 600; color: #888f91; font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.09em;
+      border-top: 1px solid rgba(0,191,255,0.4); border-bottom: 1px solid rgba(0,191,255,0.4);
+    }
+    tbody td { padding: 10px 18px; border-bottom: 1px solid rgba(0,191,255,0.28); color: #888; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #1e1e1e; }
+
+    .tr-totals td {
+      background: #141414; font-weight: 700;
+      border-top: 1px solid rgba(0,191,255,0.4); padding: 10px 18px;
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888f91;
+    }
+
+    .r { text-align: right; font-variant-numeric: tabular-nums; }
+    .mono { font-family: 'Lexend', sans-serif; font-size: 0.82rem; color: #ddd; }
+    .val-auto { color: #00bfff; font-weight: 700; }
+    .val-std  { color: #8ade28; font-weight: 700; }
+    .val-total-auto { color: #00bfff; }
+    .val-total-std  { color: #8ade28; }
+    .line-num { color: #8ade28; font-size: 0.85rem; font-weight: 700; }
+
+    .empty-note { color: #333; font-size: 0.85rem; padding: 8px 0 24px; }
+
+    #results { display: none; }
+    #results.visible { display: block; }
+
+    /* ── Two-column layout ───────────────────────────────── */
+    .content-row { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; z-index: 1; }
+    #mainContent  { flex: 1; overflow-y: auto; min-width: 0; }
+
+    /* ── Location Parser Panel ───────────────────────────── */
+    #locationPanel {
+      width: 292px; flex-shrink: 0;
+      background: #141414; border-left: 1px solid rgba(0,191,255,0.45); animation: borderLeftPulse 3s ease-in-out infinite;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .lp-header {
+      padding: 11px 15px; border-bottom: 1px solid rgba(0,191,255,0.4);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .lp-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #888f91; }
+    .lp-body  { flex: 1; overflow-y: auto; padding: 14px; }
+
+    .lp-dz {
+      border: 2px dashed #2a2a2a; border-radius: 10px;
+      padding: 26px 14px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s; background: #161616;
+    }
+    .lp-dz:hover, .lp-dz.drag-over { border-color: #ff8c00; background: rgba(255,140,0,0.04); }
+    .lp-dz h3 { font-size: 0.83rem; color: #aaa; margin-bottom: 4px; font-weight: 600; }
+    .lp-dz p  { font-size: 0.73rem; color: #444; }
+    .lp-dz input[type=file] { display: none; }
+    .lp-dz-icon { margin-bottom: 12px; display: flex; justify-content: center; }
+
+    .lp-spin-wrap { text-align: center; padding: 28px 0; }
+    .lp-spin {
+      display: inline-block; width: 22px; height: 22px;
+      border: 2px solid #2a2a2a; border-top-color: #ff8c00;
+      border-radius: 50%; animation: lp-rotate 0.75s linear infinite; margin-bottom: 10px;
+    }
+    @keyframes lp-rotate { to { transform: rotate(360deg); } }
+    .lp-spin-txt { font-size: 0.78rem; color: #555; }
+
+    .lp-conflict {
+      background: rgba(255,140,0,0.06); border: 1px solid rgba(255,140,0,0.25);
+      border-radius: 7px; padding: 11px 12px; margin-bottom: 9px;
+    }
+    .lp-conf-hdr { font-size: 0.7rem; font-weight: 800; color: #ff8c00; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+    .lp-conf-body { font-size: 0.76rem; color: #888f91; line-height: 1.55; margin-bottom: 9px; }
+    .lp-conf-btns { display: flex; gap: 7px; }
+    .lp-allow-btn {
+      flex: 1; background: #0f1f0f; color: #8ade28;
+      border: 1px solid rgba(138,222,40,0.3); border-radius: 5px;
+      padding: 6px 0; cursor: pointer; font-size: 0.78rem; font-weight: 700;
+    }
+    .lp-allow-btn:hover { background: #1a2e1a; }
+    .lp-x-btn {
+      flex: 1; background: #1e0f0f; color: #ff6b6b;
+      border: 1px solid rgba(255,107,107,0.25); border-radius: 5px;
+      padding: 6px 0; cursor: pointer; font-size: 0.78rem; font-weight: 700;
+    }
+    .lp-x-btn:hover { background: #2e1515; }
+
+    .lp-sec-lbl {
+      font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.09em; color: #444; margin-bottom: 8px; margin-top: 12px;
+    }
+    .lp-sec-lbl:first-child { margin-top: 0; }
+    .lp-note-preview {
+      background: #1a1a1a; border: 1px solid rgba(0,191,255,0.45); border-radius: 7px;
+      padding: 13px; font-size: 0.76rem; color: #ccc; white-space: pre-wrap;
+      line-height: 1.75; margin-bottom: 11px; font-family: monospace;
+    }
+    .lp-autobag-row { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+    .lp-autobag-row input[type=checkbox] { accent-color: #8ade28; width: 14px; height: 14px; cursor: pointer; }
+    .lp-autobag-row label { font-size: 0.82rem; color: #888f91; cursor: pointer; user-select: none; }
+    .lp-copy-note {
+      width: 100%; background: #0f1f0f; color: #8ade28;
+      border: 1px solid rgba(138,222,40,0.3); border-radius: 5px;
+      padding: 9px; cursor: pointer; font-size: 0.8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px;
+      transition: all 0.15s;
+    }
+    .lp-copy-note:hover { background: #1a2e1a; }
+    .lp-copy-note.copied { border-color: #8ade28; }
+    .lp-new-pdf {
+      width: 100%; background: none; color: #444; border: 1px solid #252525;
+      border-radius: 5px; padding: 7px; cursor: pointer; font-size: 0.74rem;
+      transition: all 0.15s;
+    }
+    .lp-new-pdf:hover { color: #888f91; border-color: #333; }
+    /* ── Location Parser footer menu ──────────────────────── */
+    .lp-footer {
+      flex-shrink: 0; border-bottom: 1px solid rgba(0,191,255,0.4);
+      padding: 10px 14px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .lp-footer-lbl {
+      font-size: 0.64rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #444; margin-bottom: 2px;
+    }
+    .lp-tool-btn {
+      width: 100%; background: #161616; color: #888f91;
+      border: 1px solid rgba(0,191,255,0.45); border-radius: 5px;
+      padding: 7px 10px; cursor: pointer; font-size: 0.72rem; font-weight: 700;
+      text-align: center; text-transform: uppercase; letter-spacing: 0.07em;
+      transition: background 0.15s, color 0.15s;
+      animation: borderPulse 3s ease-in-out infinite;
+    }
+    .lp-tool-btn:hover { background: #1e1e1e; color: #ccc; }
+    .lp-tool-btn.copied { color: #8ade28; border-color: rgba(138,222,40,0.4); animation: none; }
+
+    .lp-error-box {
+      background: rgba(255,107,107,0.07); border: 1px solid rgba(255,107,107,0.25);
+      border-radius: 7px; padding: 13px; color: #ff6b6b; font-size: 0.76rem;
+      line-height: 1.55; margin-bottom: 10px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+
+<canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+<!-- Recently Viewed Panel — direct body child so z-index:999 beats all content stacking contexts -->
+<div id="recentPanel">
+  <div class="recent-panel-header">
+    <span class="recent-panel-title">Recently Viewed</span>
+  </div>
+  <div id="recentList"></div>
+</div>
+
+<!-- ── Fixed top ─────────────────────────────────────────── -->
+<div class="top-fixed">
+  <header>
+    <div>
+      <div class="header-breadcrumb">Dashboards / <span>Outbound</span></div>
+      <h1>Shipment Planner <button id="topPanelToggle" onclick="toggleTopPanel()" title="Collapse inputs">▼</button></h1>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="loadNewBtn" onclick="resetTool()">&#8635; Load New File</button>
+    </div>
+  </header>
+
+  <div id="topPanel" style="display:flex; flex-direction:column; gap:0;">
+    <div id="topPanelMain" style="display:flex; align-items:center; justify-content:space-between; gap:24px; padding-bottom:0;">
+    <div style="display:flex; flex-direction:row; align-items:center; gap:24px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div class="so-row">
+        <span class="so-label">Sales Order #</span>
+        <input type="text" id="soInput" maxlength="6" placeholder="000000" inputmode="numeric"
+               oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <button id="recentBtn" onclick="toggleRecentPanel()" style="align-self:flex-start;">Recently Viewed</button>
+    </div>
+    <div class="so-row">
+      <span class="so-label">Customer PO #</span>
+      <input type="text" id="poInput" placeholder="—"
+             style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:1.1rem; font-weight:700; padding:7px 14px; width:150px; text-align:center; letter-spacing:0.08em; font-family:'Lexend',sans-serif;">
+      <style>#poInput:focus { outline:none; border-color:#8ade28; } #poInput::placeholder { color:#2e2e2e; font-weight:300; }</style>
+    </div>
+    <div class="so-row">
+      <span class="so-label">Ship To</span>
+      <select id="shipToInput" style="background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px; color:#fff; font-size:0.9rem; font-weight:600; padding:7px 14px; min-width:220px; font-family:'Lexend',sans-serif; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%23888f91%22 d=%22M6 8L1 3h10z%22/></svg>'); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;">
+        <option value="" style="color:#888f91;">— Select address —</option>
+        <option value="4800 ROBERTS RD">4800 ROBERTS RD</option>
+        <option value="1501 E BARDIN RD">1501 E BARDIN RD</option>
+        <option value="255 S MCCARRAN BLVD">255 S MCCARRAN BLVD</option>
+        <option value="14 PROSPECT DR">14 PROSPECT DR</option>
+        <option value="730 KING GEORGE BLVD">730 KING GEORGE BLVD</option>
+      </select>
+      <style>#shipToInput:focus { outline:none; border-color:#00bfff; } #shipToInput option { background:#1e1e1e; color:#fff; }</style>
+    </div>
+    <div>
+      <button id="copyAllBtn" onclick="copyAll()">Copy All Shipments</button>
+    </div>
+    </div><!-- end inputs row -->
+    </div><!-- end topPanelMain -->
+    <div id="summaryBar" style="margin-top:14px;"></div>
+  </div>
+</div>
+
+<!-- ── Scrollable content ─────────────────────────────────── -->
+<div class="content-row">
+<div id="mainContent">
+  <div class="container">
+
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">
+        <svg width="88" height="78" viewBox="0 0 88 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="wf-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="2" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M10 24 L10 70 L78 70 L78 24 L40 24 L35 14 L10 14 Z" fill="rgba(0,191,255,0.05)"/>
+          <path d="M10 14 L35 14 L40 24 L10 24 Z" fill="rgba(0,191,255,0.3)"/>
+          <line x1="10" y1="36" x2="78" y2="36" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="10" y1="47" x2="78" y2="47" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="10" y1="58" x2="78" y2="58" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="27" y1="24" x2="27" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="44" y1="24" x2="44" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="61" y1="24" x2="61" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
+          <line x1="10" y1="19" x2="36" y2="19" stroke="#00bfff" stroke-width="0.65" opacity="0.2"/>
+          <line x1="22" y1="14" x2="22" y2="24" stroke="#00bfff" stroke-width="0.65" opacity="0.2"/>
+          <g filter="url(#wf-glow)">
+            <rect x="10" y="24" width="68" height="46" stroke="#00bfff" stroke-width="1.7" fill="none"/>
+            <path d="M10 24 L10 14 L35 14 L40 24" stroke="#00bfff" stroke-width="1.7" fill="none"/>
+          </g>
+          <line x1="5"  y1="24" x2="15" y2="24" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="10" y1="19" x2="10" y2="29" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="73" y1="24" x2="83" y2="24" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="78" y1="19" x2="78" y2="29" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="5"  y1="70" x2="15" y2="70" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="10" y1="65" x2="10" y2="75" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="73" y1="70" x2="83" y2="70" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="78" y1="65" x2="78" y2="75" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
+          <line x1="5"  y1="14" x2="15" y2="14" stroke="#00bfff" stroke-width="0.9" opacity="0.5"/>
+          <line x1="10" y1="9"  x2="10" y2="19" stroke="#00bfff" stroke-width="0.9" opacity="0.5"/>
+        </svg>
+      </div>
+      <h2>Drop your sales order CSV here</h2>
+      <p>or click to browse</p>
+      <input type="file" id="fileInput" accept=".csv">
+    </div>
+
+    <div id="results">
+      <div id="autobaggerSection">
+        <div class="section-header">
+          <span class="section-label color-auto">Autobagger Shipments</span>
+          <hr>
+        </div>
+        <div class="shipments-grid" id="autobaggerShipments"></div>
+      </div>
+
+      <div class="section-header">
+        <span class="section-label" id="stdSectionLabel">Standard Shipments</span>
+        <hr>
+      </div>
+      <div class="shipments-grid" id="standardShipments"></div>
+    </div>
+
+  </div>
+</div><!-- end #mainContent -->
+
+<!-- ── Location Parser Sidebar ──────────────────────────────── -->
+<div id="locationPanel">
+  <div class="lp-header">
+    <span class="lp-title">📍 Location Parser</span>
+    <span id="lpStatusBadge" style="font-size:0.66rem;color:#444;"></span>
+  </div>
+  <div class="lp-footer">
+    <div class="lp-footer-lbl">Tools</div>
+    <button class="lp-tool-btn" id="lpDateBtn" onclick="lpCopyDate7()">Copy Date</button>
+    <button class="lp-tool-btn" id="lpLocsBtn" onclick="lpCopyLocations()">Locations</button>
+  </div>
+  <div class="lp-body">
+
+    <!-- Drop zone -->
+    <div id="lpDrop" class="lp-dz">
+      <div class="lp-dz-icon">
+        <svg width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 0 L26 0 L38 12 L38 46 L4 46 Z" fill="rgba(255,140,0,0.05)"/>
+          <path d="M26 0 L26 12 L38 12" fill="none" stroke="#ff8c00" stroke-width="1.4"/>
+          <path d="M4 0 L26 0 L38 12 L38 46 L4 46 Z" fill="none" stroke="#ff8c00" stroke-width="1.4"/>
+          <line x1="10" y1="21" x2="28" y2="21" stroke="#ff8c00" stroke-width="0.9" opacity="0.45"/>
+          <line x1="10" y1="27" x2="28" y2="27" stroke="#ff8c00" stroke-width="0.9" opacity="0.45"/>
+          <line x1="10" y1="33" x2="22" y2="33" stroke="#ff8c00" stroke-width="0.9" opacity="0.45"/>
+          <text x="8" y="42" font-size="7.5" fill="#ff8c00" font-family="monospace" opacity="0.85" font-weight="bold">PDF</text>
+        </svg>
+      </div>
+      <h3>Drop Picking Slip PDF</h3>
+      <p>or click to browse</p>
+      <input type="file" id="lpFile" accept=".pdf">
+    </div>
+
+    <!-- Processing spinner -->
+    <div id="lpProcessing" style="display:none;">
+      <div class="lp-spin-wrap">
+        <div class="lp-spin"></div>
+        <div class="lp-spin-txt">Reading picking slip…</div>
+      </div>
+    </div>
+
+    <!-- Conflicts -->
+    <div id="lpConflictsSection" style="display:none;">
+      <div class="lp-sec-lbl" style="color:#ff8c00; margin-top:0;">⚠ Location Conflicts</div>
+      <div id="lpConflictList"></div>
+    </div>
+
+    <!-- Result / note -->
+    <div id="lpResult" style="display:none;">
+      <div class="lp-sec-lbl" style="margin-top:0;">Note Preview</div>
+      <div id="lpNotePreview" class="lp-note-preview"></div>
+      <div class="lp-autobag-row">
+        <input type="checkbox" id="lpAutobag" onchange="lpUpdateNote()">
+        <label for="lpAutobag">Autobag?</label>
+      </div>
+      <button class="lp-copy-note" id="lpCopyBtn" onclick="lpCopyNote()">Copy Note</button>
+      <button class="lp-new-pdf" onclick="resetLP()">← Load New PDF</button>
+    </div>
+
+    <!-- Error -->
+    <div id="lpError" style="display:none;">
+      <div class="lp-error-box" id="lpErrorMsg"></div>
+      <button class="lp-new-pdf" style="margin-top:8px;" onclick="resetLP()">← Try Again</button>
+    </div>
+
+  </div><!-- end lp-body -->
+
+</div>
+</div><!-- end .content-row -->
+
+<script>
+const ACCEPTABLE_SIZES = new Set([
+  '001','002','003','004','005','006','007','008','009','010',
+  '011','012','013','014','015','016','017','018','019','020',
+  '021','022','023','024','025','026','027','028','029',
+  '102','103','104','105','106','107','108','109','110','111',
+  '112','113','114','115','116','117','118','119','120','121',
+  '122','123','124','125','126','127','128',
+  '201','202','203','204','205','206','207','208','209','210',
+  '211','212','213','214','215','216','217','218','219','220',
+  '221','222',
+  '309','310','311','312','313','314','315','316','317','318',
+  '319','320','321','322','323','324','325',
+  '400','401',
+  '901','902','903','904','905','906','907','908','909','910',
+  '911','912','913','914','915','916','917','918','919','920'
+]);
+const ACCEPTABLE_MATERIALS = new Set(['N','C','V','BV','HSN','HNBR','QN']);
+
+function isAutobaggerEligible(item, com) {
+  if (com <= 30) return false;
+  const match = item.toUpperCase().match(/KM-([A-Z]+)\d+(\d{3})\/\d+/);
+  if (!match) return false;
+  const material = match[1];
+  const size = match[2].padStart(3, '0');
+  return ACCEPTABLE_MATERIALS.has(material) && ACCEPTABLE_SIZES.has(size);
+}
+
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let inQuotes = false, cell = '';
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(cell.trim()); cell = ''; }
+      else { cell += ch; }
+    }
+    row.push(cell.trim());
+    result.push(row);
+  }
+  return result;
+}
+
+function parseNum(val) {
+  if (val === null || val === undefined) return 0;
+  return parseFloat(val.toString().replace(/[$,%]/g, '').replace(/,/g, '').trim()) || 0;
+}
+
+function splitAutobagger(items) {
+  if (items.length === 0) return [];
+  const numShipments = Math.ceil(items.length / 25);
+  const base  = Math.floor(items.length / numShipments);
+  const extra = items.length % numShipments;
+  const out = []; let idx = 0;
+  for (let i = 0; i < numShipments; i++) {
+    const size = base + (i < extra ? 1 : 0);
+    out.push(items.slice(idx, idx + size));
+    idx += size;
+  }
+  return out;
+}
+
+function splitStandard(items) {
+  if (items.length === 0) return [];
+  const numShipments = Math.ceil(items.length / 25);
+  const base  = Math.floor(items.length / numShipments);
+  const extra = items.length % numShipments;
+  const out = []; let idx = 0;
+  for (let i = 0; i < numShipments; i++) {
+    const size = base + (i < extra ? 1 : 0);
+    out.push(items.slice(idx, idx + size));
+    idx += size;
+  }
+  return out;
+}
+
+const fmt$ = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const fmtN = n => n.toLocaleString();
+
+function buildTSV(btn) {
+  const soNum   = (document.getElementById('soInput').value.trim() || '000000');
+  const poNum   = (document.getElementById('poInput').value.trim() || '');
+  const shipTo  = (document.getElementById('shipToInput').value || '');
+  const lines   = btn.dataset.lines;
+  const bags    = btn.dataset.bags;
+  const revenue = fmt$(parseFloat(btn.dataset.rev));
+  const isAuto  = btn.dataset.auto === 'true';
+  if (isAuto) {
+    return `${soNum}-\tPrinted\t\t${shipTo}\t\t\t${lines}\t\t\t\t\t\t\t\t\t\t\t\t\tKIT ROOM: Auto-bag this whole shipment!\t${revenue}\t${poNum}\t\t${bags}\tTRUE`;
+  } else {
+    return `${soNum}-\tPrinted\t\t${shipTo}\t\t\t${lines}\t\t\t\t\t\t\t\t\t\t\t\t\t\t${revenue}\t${poNum}\t\t${bags}`;
+  }
+}
+
+function copyShipment(btn) {
+  event.stopPropagation();
+  const tsv = buildTSV(btn);
+  const finish = () => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tsv).then(finish).catch(() => fallbackCopy(tsv, finish));
+  } else { fallbackCopy(tsv, finish); }
+}
+
+function copyAll() {
+  const btns = Array.from(document.querySelectorAll('.copy-btn'));
+  if (!btns.length) return;
+  const tsv = btns.map(b => buildTSV(b)).join('\n');
+  const btn = document.getElementById('copyAllBtn');
+  const finish = () => {
+    btn.textContent = `✓ ${btns.length} Rows Copied`;
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy All Shipments'; btn.classList.remove('copied'); }, 2500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tsv).then(finish).catch(() => fallbackCopy(tsv, finish));
+  } else { fallbackCopy(tsv, finish); }
+}
+
+function fallbackCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy'); document.body.removeChild(ta); cb();
+}
+
+let cardCounter = 0;
+
+function toggleCard(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? '' : 'none';
+  chev.textContent   = isHidden ? '▼' : '▶';
+}
+
+function renderShipment(rows, shipmentNum, isAuto) {
+  const id        = 'card-' + (++cardCounter);
+  const totalBags = rows.reduce((s, r) => s + (r.isKit || r.isGage ? 0 : r.com), 0);
+  const totalRev  = rows.reduce((s, r) => s + r.com * r.price, 0);
+  const kitLines  = rows.filter(r => r.isKit).length;
+  const gageLines = rows.filter(r => r.isGage).length;
+  const soNum     = (document.getElementById('soInput').value.trim() || '______');
+  const title     = `${soNum}-${shipmentNum}`;
+  const hdrClass  = isAuto ? 'card-header-auto' : 'card-header-std';
+  const valClass  = isAuto ? 'val-auto' : 'val-std';
+  const totClass  = isAuto ? 'val-total-auto' : 'val-total-std';
+  const badge     = isAuto
+    ? '<span class="badge badge-auto">Autobagger</span>'
+    : '<span class="badge badge-std">Standard</span>';
+
+  const rowsHtml = rows.map(r => {
+    const itemEsc = escHtml(r.item);
+    const clipBtn = `<button class="item-copy-btn" onclick="copyItem(event,'${r.item.replace(/'/g,"\\'")}')">📋</button>`;
+    if (r.isKit) {
+      return `<tr>
+        <td class="r line-num">${r.line}</td>
+        <td class="mono">${itemEsc}<span class="badge badge-kit">KIT</span>${clipBtn}</td>
+        <td class="r val-kit">${fmtN(r.com)}</td>
+      </tr>`;
+    }
+    if (r.isGage) {
+      return `<tr>
+        <td class="r line-num">${r.line}</td>
+        <td class="mono">${itemEsc}<span class="badge badge-gage">GAGE</span>${clipBtn}</td>
+        <td class="r val-gage">—</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td class="r line-num">${r.line}</td>
+      <td class="mono">${itemEsc}${clipBtn}</td>
+      <td class="r ${valClass}">${fmtN(r.com)}</td>
+    </tr>`;
+  }).join('');
+
+  const kitMetaHtml = kitLines > 0 ? `
+    <div class="meta-item">
+      <span class="meta-val" style="color:#00bfff">${fmtN(kitLines)}</span>
+      <span class="meta-lbl">Kits</span>
+    </div>` : '';
+  const gageMetaHtml = gageLines > 0 ? `
+    <div class="meta-item">
+      <span class="meta-val" style="color:#ffaa00">${fmtN(gageLines)}</span>
+      <span class="meta-lbl">Gages</span>
+    </div>` : '';
+
+  return `
+  <div class="shipment-card">
+    <div class="card-header ${hdrClass}" onclick="toggleCard('${id}')">
+      <div class="card-title">${badge} ${escHtml(title)}</div>
+      <div class="card-right">
+        <div class="card-meta">
+          <div class="meta-item">
+            <span class="meta-val">${fmtN(rows.length)}</span>
+            <span class="meta-lbl">Lines</span>
+          </div>
+          ${kitMetaHtml}
+          ${gageMetaHtml}
+          <div class="meta-item">
+            <span class="meta-val ${valClass}">${fmtN(totalBags)}</span>
+            <span class="meta-lbl">Bags</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-val ${valClass}">${fmt$(totalRev)}</span>
+            <span class="meta-lbl">Revenue</span>
+          </div>
+        </div>
+        <button class="copy-btn"
+          data-lines="${rows.length}" data-bags="${totalBags}"
+          data-rev="${totalRev.toFixed(2)}" data-auto="${isAuto}"
+          onclick="copyShipment(this)">Copy</button>
+        <span class="chevron" id="chev-${id}">▶</span>
+      </div>
+    </div>
+    <div id="${id}" style="display:none;">
+      <table>
+        <thead><tr>
+          <th class="r" style="width:60px">Line</th>
+          <th>Item</th>
+          <th class="r">Bags (Com)</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+          <tr class="tr-totals">
+            <td colspan="2" class="r">Total Bags</td>
+            <td class="r ${totClass}">${fmtN(totalBags)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function processCSV(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) { alert('Could not read the file. Please check it is a valid CSV.'); return; }
+
+  const headers  = rows[0].map(h => h.toLowerCase().trim());
+  const col      = name => headers.indexOf(name.toLowerCase());
+  const lineCol  = col('line');
+  const itemCol  = col('item');
+  const comCol   = col('com');
+  const priceCol = col('price');
+
+  if (itemCol === -1 || comCol === -1 || priceCol === -1) {
+    alert(`Missing required columns.\nFound: ${headers.join(', ')}\n\nNeed: Item, Com, Price`);
+    return;
+  }
+
+  const eligible = [], remaining = [], noCommit = [], allCommitted = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(c => !c)) continue;
+    const item  = (r[itemCol]  || '').trim();
+    const com   = parseNum(r[comCol]);
+    const price = parseNum(r[priceCol]);
+    const line  = lineCol >= 0 ? (r[lineCol] || '').trim() : String(i);
+    if (!item) continue;
+    const isKit  = item.toUpperCase().startsWith('KIT');
+    const isGage = item.toUpperCase().startsWith('GAGE');
+    const rec = { line, item, com, price, isKit, isGage };
+    if (com <= 0) { noCommit.push(rec); continue; }
+    allCommitted.push(rec);
+    (isAutobaggerEligible(item, com) ? eligible : remaining).push(rec);
+  }
+
+  const simpleMode = allCommitted.length < 50;
+  cardCounter = 0;
+  let autoShipments, stdShipments;
+
+  if (simpleMode) {
+    autoShipments = [];
+    stdShipments  = splitStandard(allCommitted);
+    document.getElementById('autobaggerSection').style.display = 'none';
+    const lbl = document.getElementById('stdSectionLabel');
+    lbl.textContent = 'Shipments'; lbl.className = 'section-label color-auto';
+  } else {
+    autoShipments = splitAutobagger(eligible);
+    stdShipments  = splitStandard(remaining);
+    document.getElementById('autobaggerSection').style.display = '';
+    const lbl = document.getElementById('stdSectionLabel');
+    lbl.textContent = 'Standard Shipments'; lbl.className = 'section-label color-std';
+  }
+
+  const sb = document.getElementById('summaryBar');
+  sb.style.display = 'block';
+
+  const kitItems      = allCommitted.filter(r => r.isKit);
+  const totalKitLines = kitItems.length;
+  const totalKitUnits = kitItems.reduce((s, r) => s + r.com, 0);
+  const kitSummaryCard = totalKitLines > 0 ? `
+    <div class="summary-card">
+      <div class="s-label">Kit Lines / Units</div>
+      <div class="s-value" style="color:#00bfff">${fmtN(totalKitLines)} <span style="font-size:0.9rem; font-weight:400; color:#888f91">/ ${fmtN(totalKitUnits)}</span></div>
+    </div>` : '';
+
+  if (simpleMode) {
+    const totalBags = allCommitted.reduce((s, r) => s + (r.isKit || r.isGage ? 0 : r.com), 0);
+    const totalRev  = allCommitted.reduce((s, r) => s + r.com * r.price, 0);
+    sb.innerHTML = `<div class="summary">
+      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(allCommitted.length + noCommit.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Committed Lines</div><div class="s-value" style="color:#00bfff">${fmtN(allCommitted.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Shipments</div><div class="s-value" style="color:#00bfff">${fmtN(stdShipments.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Total Bags</div><div class="s-value" style="color:#00bfff">${fmtN(totalBags)}</div></div>
+      ${kitSummaryCard}
+      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#00bfff; font-size:1.35rem">${fmt$(totalRev)}</div></div>
+      <div class="summary-card"><div class="s-label">No Commit (Skipped)</div><div class="s-value" style="color:#2e2e2e">${fmtN(noCommit.length)}</div></div>
+    </div>`;
+  } else {
+    const totalBagsAuto = eligible.reduce((s, r) => s + r.com, 0);
+    const totalRevAuto  = eligible.reduce((s, r) => s + r.com * r.price, 0);
+    const totalBagsStd  = remaining.reduce((s, r) => s + (r.isKit || r.isGage ? 0 : r.com), 0);
+    const totalRevStd   = remaining.reduce((s, r) => s + r.com * r.price, 0);
+    sb.innerHTML = `<div class="summary">
+      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(eligible.length + remaining.length + noCommit.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#fff; font-size:1.35rem">${fmt$(totalRevAuto + totalRevStd)}</div></div>
+      <div class="summary-card"><div class="s-label">Autobagger Lines</div><div class="s-value" style="color:#00bfff">${fmtN(eligible.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Auto Bags</div><div class="s-value" style="color:#00bfff">${fmtN(totalBagsAuto)}</div></div>
+      <div class="summary-card"><div class="s-label">Auto Revenue</div><div class="s-value" style="color:#00bfff; font-size:1.35rem">${fmt$(totalRevAuto)}</div></div>
+      <div class="summary-card"><div class="s-label">Standard Lines</div><div class="s-value" style="color:#8ade28">${fmtN(remaining.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Standard Bags</div><div class="s-value" style="color:#8ade28">${fmtN(totalBagsStd)}</div></div>
+      <div class="summary-card"><div class="s-label">Standard Revenue</div><div class="s-value" style="color:#8ade28; font-size:1.35rem">${fmt$(totalRevStd)}</div></div>
+      ${kitSummaryCard}
+      <div class="summary-card"><div class="s-label">No Commit (Skipped)</div><div class="s-value" style="color:#2e2e2e">${fmtN(noCommit.length)}</div></div>
+    </div>`;
+  }
+
+  document.getElementById('autobaggerShipments').innerHTML =
+    autoShipments.length === 0
+      ? '<p class="empty-note">No autobagger-eligible lines found.</p>'
+      : autoShipments.map((s, i) => renderShipment(s, i + 1, true)).join('');
+
+  document.getElementById('standardShipments').innerHTML =
+    stdShipments.length === 0
+      ? '<p class="empty-note">No standard lines with committed quantities.</p>'
+      : stdShipments.map((s, i) => renderShipment(s, autoShipments.length + i + 1, false)).join('');
+
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('dropZone').style.display = 'none';
+  document.getElementById('loadNewBtn').style.display = 'inline-block';
+  document.getElementById('copyAllBtn').style.display = 'inline-block';
+}
+
+function resetTool() {
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('dropZone').style.display = '';
+  document.getElementById('loadNewBtn').style.display = 'none';
+  document.getElementById('copyAllBtn').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('summaryBar').innerHTML = '';
+  document.getElementById('autobaggerSection').style.display = '';
+  const lbl = document.getElementById('stdSectionLabel');
+  lbl.textContent = 'Standard Shipments'; lbl.className = 'section-label color-std';
+  resetLP();
+}
+
+// ── Collapsible Top Panel ─────────────────────────────────────────────────────
+function toggleTopPanel() {
+  const panel  = document.getElementById('topPanel');
+  const toggle = document.getElementById('topPanelToggle');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  toggle.textContent  = isOpen ? '▶' : '▼';
+  toggle.title        = isOpen ? 'Expand inputs' : 'Collapse inputs';
+}
+
+// ── Item Name Copy ────────────────────────────────────────────────────────────
+function copyItem(e, item) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const finish = () => {
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copied'); }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(item).then(finish).catch(() => fallbackCopy(item, finish));
+  } else { fallbackCopy(item, finish); }
+}
+
+// ── Recently Viewed ───────────────────────────────────────────────────────────
+const RECENT_KEY = 'shipmentPlannerRecent';
+const RECENT_MAX = 10;
+
+function getRecentList() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function saveToRecent(csvText) {
+  const soNum  = document.getElementById('soInput').value.trim() || '—';
+  const poNum  = document.getElementById('poInput').value.trim() || '—';
+  const shipTo = document.getElementById('shipToInput').value || '—';
+  const entry  = { soNum, poNum, shipTo, date: new Date().toISOString(), csvText };
+  let list = getRecentList().filter(e => e.soNum !== soNum);
+  list.unshift(entry);
+  if (list.length > RECENT_MAX) list = list.slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list)); } catch(e) {}
+  updateRecentBtn();
+}
+
+function updateRecentBtn() {
+  document.getElementById('recentBtn').style.display = getRecentList().length > 0 ? 'inline-block' : 'none';
+}
+
+function toggleRecentPanel() {
+  const panel = document.getElementById('recentPanel');
+  const btn   = document.getElementById('recentBtn');
+  const open  = panel.classList.contains('open');
+  if (open) { panel.classList.remove('open'); btn.classList.remove('active'); }
+  else {
+    renderRecentList();
+    const topRect = document.querySelector('.top-fixed').getBoundingClientRect();
+    panel.style.top = (topRect.bottom + 8) + 'px';
+    panel.classList.add('open');
+    btn.classList.add('active');
+  }
+}
+
+function closeRecentPanel() {
+  document.getElementById('recentPanel').classList.remove('open');
+  document.getElementById('recentBtn').classList.remove('active');
+}
+
+function renderRecentList() {
+  const list = getRecentList();
+  const el   = document.getElementById('recentList');
+  if (!list.length) { el.innerHTML = '<div class="recent-empty">No recent orders yet.</div>'; return; }
+  el.innerHTML = list.map((e, i) => {
+    const d       = new Date(e.date);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `<div class="recent-item" onclick="openRecent(${i})">
+      <div class="recent-so">SO# ${escHtml(e.soNum)}</div>
+      <div class="recent-meta">
+        <span>PO: ${escHtml(e.poNum !== '—' ? e.poNum : '—')}</span>
+        <span style="color:#333">·</span>
+        <span>${escHtml(e.shipTo !== '—' ? e.shipTo : 'No address')}</span>
+      </div>
+      <div class="recent-date">${dateStr} at ${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function openRecent(index) {
+  const entry = getRecentList()[index];
+  if (!entry) return;
+  closeRecentPanel();
+  document.getElementById('soInput').value     = entry.soNum  === '—' ? '' : entry.soNum;
+  document.getElementById('poInput').value     = entry.poNum  === '—' ? '' : entry.poNum;
+  document.getElementById('shipToInput').value = entry.shipTo === '—' ? '' : entry.shipTo;
+  processCSV(entry.csvText);
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('recentPanel');
+  const btn   = document.getElementById('recentBtn');
+  if (panel.classList.contains('open') && !panel.contains(e.target) && !btn.contains(e.target)) closeRecentPanel();
+});
+
+updateRecentBtn();
+
+// ── File Handling ─────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => { const csv = e.target.result; processCSV(csv); saveToRecent(csv); };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOCATION PARSER
+// ═══════════════════════════════════════════════════════════════
+
+// Set up PDF.js worker (CDN — works from file:// too)
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── State ──────────────────────────────────────────────────────
+let _lpLineData        = {};  // lineNum -> { description, rawLocs: [] }
+let _lpResolved        = {};  // lineNum -> [categoryStrings]
+let _lpConflicts       = [];  // [{lineNum, catMap: {cat->[rawLocs]}, description}]
+let _lpPending         = [];  // subset of _lpConflicts not yet resolved
+let _lpLocationsSummary = ''; // e.g. "19 VLM / 3 OVERFLOW / 1 KIT ROOM"
+
+// ── Location classification ────────────────────────────────────
+function lpClassify(rawLoc, description) {
+  const desc = (description || '').toUpperCase();
+  if (/\bCORD\b|SPLICING\s+KIT/.test(desc)) return 'SHOP';
+  const loc = (rawLoc || '').trim().toUpperCase().replace(/\n/g, '').replace(/\s+/g, '');
+  if (/^0[123]$/.test(loc)) return 'VLM';
+  if (loc === '0') return 'RECEIVING';
+  if (/^KITS-/.test(loc)) return 'KITS';
+  if (/^S-M$/.test(loc) || /^S-\d+(-\d+)*$/.test(loc)) return 'PALLETS';
+  return 'OVERFLOW';
+}
+
+// ── PDF text row grouper ───────────────────────────────────────
+function lpGroupRows(items, yTol) {
+  yTol = yTol || 3;
+  const f = items.filter(i => i.str && i.str.trim());
+  if (!f.length) return [];
+  const s = f.slice().sort(function(a, b) {
+    var dy = b.transform[5] - a.transform[5];
+    if (Math.abs(dy) <= yTol) return a.transform[4] - b.transform[4];
+    return dy;
+  });
+  var rows = [], cur = null;
+  for (var i = 0; i < s.length; i++) {
+    var item = s[i];
+    var y = item.transform[5];
+    if (!cur || Math.abs(y - cur.y) > yTol) {
+      cur = { y: y, items: [item] };
+      rows.push(cur);
+    } else {
+      cur.items.push(item);
+    }
+  }
+  return rows.map(function(r) { return r.items; });
+}
+
+// ── Core PDF parsing ───────────────────────────────────────────
+async function lpParsePDF(file) {
+  const ab  = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  const lineData = {};
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc   = await page.getTextContent();
+    const all  = tc.items.map(i => i.str).join(' ');
+
+    // Accept "Item Components" format (original) or "Lot Details" format (Kimball-style)
+    if (!all.includes('Picking Slip') ||
+        (!all.includes('Item Components') && !all.includes('Lot Details'))) continue;
+
+    const rows = lpGroupRows(tc.items, 3);
+
+    // Find Location column x-position from the sub-table header row
+    // (the row that has BOTH "Location" and "CoO")
+    let locationX = null;
+    for (const row of rows) {
+      const strs = row.map(i => i.str.trim());
+      if (strs.some(s => s === 'Location') && strs.some(s => s === 'CoO')) {
+        const locItem = row.find(i => i.str.trim() === 'Location');
+        if (locItem) { locationX = locItem.transform[4]; break; }
+      }
+    }
+
+    // Extract location from a row: x-position first, second-to-last as fallback
+    const extractLoc = function(row, strs) {
+      let loc = null;
+      if (locationX !== null) {
+        let closest = null, minDist = Infinity;
+        for (const item of row) {
+          if (!item.str.trim()) continue;
+          const dist = Math.abs(item.transform[4] - locationX);
+          if (dist < minDist) { minDist = dist; closest = item; }
+        }
+        if (closest && minDist < 45) loc = closest.str.trim();
+      }
+      if (!loc || /^[A-Z]{2,3}$/.test(loc)) loc = strs[strs.length - 2];
+      return loc;
+    };
+
+    // PDF sometimes splits a location like "15-07-05-02" across two rows.
+    // If the extracted location ends with '-', scan ahead for the continuation.
+    const completeLoc = function(loc, ri) {
+      if (!loc || !loc.endsWith('-') || locationX === null) return loc;
+      for (let rj = ri + 1; rj < Math.min(ri + 5, rows.length); rj++) {
+        const nextStrs = rows[rj].map(i => i.str.trim()).filter(s => s);
+        if (nextStrs.some(s => /^[A-Z]{2,3}$/.test(s) || /^\d+\.\d+$/.test(s))) break;
+        for (const item of rows[rj]) {
+          const t = item.str.trim();
+          if (!t) continue;
+          const dist = Math.abs(item.transform[4] - locationX);
+          if (dist < 50 && /^\d/.test(t)) { loc += t; break; }
+        }
+        if (!loc.endsWith('-')) break;
+      }
+      return loc;
+    };
+
+    let currentParentLine = null;
+
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      const strs = row.map(i => i.str.trim()).filter(s => s !== '');
+      if (!strs.length) continue;
+      const last = strs[strs.length - 1];
+
+      // ── 1. X.Y component row (Item Components format) ──────────────────────
+      // Check first so these are never mistaken for lot data rows below.
+      const subStr = strs.find(s => /^\d+\.\d+$/.test(s));
+      if (subStr) {
+        const parentLine = subStr.split('.')[0];
+        currentParentLine = parentLine;
+        // Only extract location if this row has actual lot data (ends with a CoO code).
+        // Without this guard, item codes near the Location column get picked up as locations.
+        if (/^[A-Z]{2,3}$/.test(last)) {
+          let location = extractLoc(row, strs);
+          if (location && location !== subStr) {
+            location = completeLoc(location, ri);
+            if (!lineData[parentLine]) lineData[parentLine] = { description: '', rawLocs: [] };
+            lineData[parentLine].rawLocs.push(location.replace(/\n/g, '').replace(/\s+/g, ''));
+          }
+        }
+        continue;
+      }
+
+      // ── 2. Lot data row: ends with 2-3 letter all-caps CoO value ───────────
+      // Handles both formats. In Item Components, this catches secondary lot rows
+      // that don't repeat the X.Y identifier. Must come BEFORE the main-item check
+      // since both can start with a number.
+      if (/^[A-Z]{2,3}$/.test(last) && strs.length >= 3 && currentParentLine) {
+        let location = extractLoc(row, strs);
+        if (location && location !== last) {
+          location = completeLoc(location, ri);
+          if (!lineData[currentParentLine]) lineData[currentParentLine] = { description: '', rawLocs: [] };
+          lineData[currentParentLine].rawLocs.push(location.replace(/\n/g, '').replace(/\s+/g, ''));
+        }
+        continue;
+      }
+
+      // ── 3. Main item row: first string is a plain integer ──────────────────
+      if (/^\d+$/.test(strs[0]) && strs.length >= 3) {
+        const lineNum = strs[0];
+        currentParentLine = lineNum;
+        if (!lineData[lineNum]) {
+          const descParts = strs.slice(1).filter(function(s) {
+            return s.length > 2 && !/^\d+(\.\d+)?$/.test(s) && !/^(ea|pc|ft|in|m|cm|lbs?)$/i.test(s);
+          });
+          lineData[lineNum] = { description: descParts.join(' '), rawLocs: [] };
+        }
+        continue;
+      }
+    }
+  }
+
+  return lineData;
+}
+
+// ── Build categorized summary ──────────────────────────────────
+function lpBuildSummary(lineData) {
+  const resolved  = {};
+  const conflicts = [];
+
+  for (const [lineNum, data] of Object.entries(lineData)) {
+    if (!data.rawLocs.length) continue;
+
+    // Deduplicate — same location appearing for multiple lots is not a conflict
+    const uniqueLocs = data.rawLocs.filter((v, i, a) => a.indexOf(v) === i);
+
+    // Map each raw location to a category
+    const catMap = {};
+    for (const raw of uniqueLocs) {
+      const cat = lpClassify(raw, data.description);
+      if (!catMap[cat]) catMap[cat] = [];
+      catMap[cat].push(raw);
+    }
+
+    const cats = Object.keys(catMap);
+    if (cats.length > 1) {
+      conflicts.push({ lineNum, catMap, description: data.description });
+    } else if (cats.length === 1) {
+      resolved[lineNum] = [cats[0]];
+    }
+  }
+
+  return { resolved, conflicts };
+}
+
+// ── Generate note text ─────────────────────────────────────────
+function lpGenerateNote(resolved, autobag) {
+  const counts = { VLM: 0, OVERFLOW: 0, SHOP: 0, RECEIVING: 0, PALLETS: 0, KITS: 0 };
+
+  for (const cats of Object.values(resolved)) {
+    for (const cat of cats) {
+      if (cat in counts) counts[cat]++;
+    }
+  }
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const parts = [];
+  if (counts.VLM      > 0) parts.push(counts.VLM      + ' VLM');
+  if (counts.OVERFLOW > 0) parts.push(counts.OVERFLOW  + ' OVERFLOW');
+  if (counts.SHOP     > 0) parts.push(counts.SHOP      + ' SHOP');
+  if (counts.RECEIVING> 0) parts.push(counts.RECEIVING + ' RECEIVING');
+  if (counts.PALLETS  > 0) parts.push(counts.PALLETS   + ' on PALLETS ("S-")');
+  if (counts.KITS     > 0) parts.push(counts.KITS      + ' KIT ROOM');
+
+  _lpLocationsSummary = parts.join(' / ');
+
+  let note = '**Alert Vinc if this order was printed by QC STATION _____\n'
+           + 'WAREHOUSE:\n'
+           + '_Bring to Kit Room upon completion.\n'
+           + '_Total Labels: ' + total + '\n'
+           + (parts.length > 0 ? '_' + _lpLocationsSummary : '')
+           + '\n\n'
+           + 'KIT ROOM:\n';
+
+  if (autobag) {
+    note += 'AUTO-BAG THIS WHOLE SHIPMENT!\n';
+  }
+
+  note += '*Please use label format "KIMMID Pkg O-Rings" for KM- bagged parts\n'
+       +  '*Please use label format "KIMMID Pkg O-Rings (G- Bags)" for GM- bagged parts\n'
+       +  '**All N90 parts are color coded with a YELLOW dot.';
+
+  return note;
+}
+
+// ── Render preview with bold/italic markdown-style formatting ──
+function lpRenderPreview(text) {
+  return text.split('\n').map(function(line) {
+    // All-caps header lines ending in colon → bold (WAREHOUSE:, KIT ROOM:)
+    if (/^[A-Z][A-Z ]*:$/.test(line.trim())) {
+      return '<strong>' + escHtml(line) + '</strong>';
+    }
+    // Lines starting with ** → bold
+    if (line.slice(0, 2) === '**') {
+      return '<strong>' + escHtml(line) + '</strong>';
+    }
+    // Lines starting with _ → italic, strip the underscore
+    if (line.charAt(0) === '_') {
+      return '<em>' + escHtml(line.slice(1)) + '</em>';
+    }
+    // Lines starting with * (not **) → italic, keep the asterisk
+    if (line.charAt(0) === '*') {
+      return '<em>' + escHtml(line) + '</em>';
+    }
+    return escHtml(line);
+  }).join('\n');
+}
+
+// ── UI helpers ────────────────────────────────────────────────
+function lpShow(id) {
+  ['lpDrop','lpProcessing','lpConflictsSection','lpResult','lpError'].forEach(function(el) {
+    document.getElementById(el).style.display = (el === id) ? '' : 'none';
+  });
+}
+
+function lpShowError(msg) {
+  document.getElementById('lpErrorMsg').textContent = msg;
+  lpShow('lpError');
+  document.getElementById('lpStatusBadge').textContent = '';
+}
+
+function lpUpdateNote() {
+  const autobag  = document.getElementById('lpAutobag').checked;
+  const note     = lpGenerateNote(_lpResolved, autobag);
+  const preview  = document.getElementById('lpNotePreview');
+  preview._rawNote  = note;                           // store raw for Copy
+  preview.innerHTML = lpRenderPreview(note);          // display with formatting
+}
+
+function lpShowResult() {
+  lpShow('lpResult');
+  document.getElementById('lpAutobag').checked = false;
+  lpUpdateNote();
+  // Count total labels for status badge
+  let total = 0;
+  for (const cats of Object.values(_lpResolved)) total += cats.length;
+  document.getElementById('lpStatusBadge').textContent = total + ' labels';
+}
+
+function lpRenderConflicts() {
+  const list = document.getElementById('lpConflictList');
+  list.innerHTML = _lpPending.map(function(c) {
+    const catSummary = Object.entries(c.catMap).map(function(e) {
+      return e[1].join(', ') + ' → ' + e[0];
+    }).join('<br>');
+    return '<div class="lp-conflict" id="lp-conf-' + c.lineNum + '">'
+      + '<div class="lp-conf-hdr">MULTIPLE LOCATIONS — Line #' + c.lineNum + ' — PASS?</div>'
+      + '<div class="lp-conf-body">' + catSummary + '</div>'
+      + '<div class="lp-conf-btns">'
+      + '<button class="lp-allow-btn" onclick="lpAllow(\'' + c.lineNum + '\')">PASS</button>'
+      + '<button class="lp-x-btn"     onclick="resetLP()">✗ Cancel</button>'
+      + '</div></div>';
+  }).join('');
+  lpShow('lpConflictsSection');
+  document.getElementById('lpStatusBadge').textContent = _lpPending.length + ' conflict' + (_lpPending.length > 1 ? 's' : '');
+}
+
+function lpAllow(lineNum) {
+  // Add this line to resolved under ALL its categories
+  const conf = _lpPending.find(c => c.lineNum === lineNum);
+  if (conf) {
+    _lpResolved[lineNum] = Object.keys(conf.catMap);
+  }
+  // Remove from pending
+  _lpPending = _lpPending.filter(c => c.lineNum !== lineNum);
+  const card = document.getElementById('lp-conf-' + lineNum);
+  if (card) card.remove();
+
+  if (_lpPending.length === 0) {
+    lpShowResult();
+  } else {
+    document.getElementById('lpStatusBadge').textContent = _lpPending.length + ' conflict' + (_lpPending.length > 1 ? 's' : '');
+  }
+}
+
+// ── Build rich HTML for copying (bold + italic via inline styles) ─
+// Uses <br> exclusively — no <p> or <div> — so each line = one
+// Shift+Enter in the ERP (no unwanted blank paragraph spacing).
+function lpBuildCopyHTML(text) {
+  var lines = text.split('\n');
+  var parts = lines.map(function(line) {
+    if (line === '') return '';   // blank line → becomes <br><br> when joined
+    // All-caps header ending in colon (WAREHOUSE:, KIT ROOM:) → bold
+    if (/^[A-Z][A-Z ]*:$/.test(line.trim())) {
+      return '<span style="font-weight:bold">' + escHtml(line) + '</span>';
+    }
+    // Lines starting with ** → bold
+    if (line.slice(0, 2) === '**') {
+      return '<span style="font-weight:bold">' + escHtml(line) + '</span>';
+    }
+    // Lines starting with _ → italic, strip the underscore
+    if (line.charAt(0) === '_') {
+      return '<span style="font-style:italic">' + escHtml(line.slice(1)) + '</span>';
+    }
+    // Lines starting with * (not **) → italic, keep the asterisk
+    if (line.charAt(0) === '*') {
+      return '<span style="font-style:italic">' + escHtml(line) + '</span>';
+    }
+    return '<span>' + escHtml(line) + '</span>';
+  });
+  // <br> between every entry; empty string entries produce <br><br>
+  return parts.join('<br>');
+}
+
+function lpCopyNote() {
+  const el      = document.getElementById('lpNotePreview');
+  const rawText = el._rawNote || el.textContent;
+  const btn     = document.getElementById('lpCopyBtn');
+
+  const finish = function() {
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy Note'; btn.classList.remove('copied'); }, 2000);
+  };
+
+  const innerHtml = lpBuildCopyHTML(rawText);
+
+  // ── Primary: contenteditable + execCommand ─────────────────────
+  // This is the most reliable method for rich-text copy from a
+  // local file:// URL and works across Chrome / Edge / Firefox.
+  var tmp = document.createElement('div');
+  tmp.contentEditable = 'true';
+  // Position off-screen so it's in the DOM but not visible
+  tmp.style.cssText = 'position:fixed;top:-9999px;left:-9999px;'
+                    + 'width:700px;min-height:20px;'
+                    + 'font-family:Arial,sans-serif;font-size:11pt;'
+                    + 'white-space:pre-wrap;';
+  tmp.innerHTML = innerHtml;
+  document.body.appendChild(tmp);
+
+  // Select all content inside the element
+  var range = document.createRange();
+  range.selectNodeContents(tmp);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  tmp.focus();
+
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+
+  sel.removeAllRanges();
+  document.body.removeChild(tmp);
+
+  if (ok) { finish(); return; }
+
+  // ── Fallback: modern Clipboard API (rich) ─────────────────────
+  if (navigator.clipboard && window.ClipboardItem) {
+    var fullHtml = '<!DOCTYPE html><html><body><div style="font-family:Arial,sans-serif;font-size:11pt;">'
+                 + innerHtml + '</div></body></html>';
+    var hBlob = new Blob([fullHtml], { type: 'text/html' });
+    var tBlob = new Blob([rawText],  { type: 'text/plain' });
+    navigator.clipboard.write([new ClipboardItem({'text/html': hBlob, 'text/plain': tBlob})])
+      .then(finish)
+      .catch(function() {
+        navigator.clipboard.writeText(rawText).then(finish).catch(function() { fallbackCopy(rawText, finish); });
+      });
+    return;
+  }
+
+  // ── Last resort: plain text ────────────────────────────────────
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(rawText).then(finish).catch(function() { fallbackCopy(rawText, finish); });
+  } else {
+    fallbackCopy(rawText, finish);
+  }
+}
+
+function resetLP() {
+  _lpLineData  = {};
+  _lpResolved  = {};
+  _lpConflicts = [];
+  _lpPending   = [];
+  document.getElementById('lpAutobag').checked = false;
+  document.getElementById('lpStatusBadge').textContent = '';
+  lpShow('lpDrop');
+}
+
+// ── File handler ──────────────────────────────────────────────
+async function handleLPFile(file) {
+  if (!file || file.type !== 'application/pdf') {
+    lpShowError('Please drop a PDF file.');
+    return;
+  }
+  if (typeof pdfjsLib === 'undefined') {
+    lpShowError('PDF.js failed to load. Check your internet connection.');
+    return;
+  }
+
+  lpShow('lpProcessing');
+  document.getElementById('lpStatusBadge').textContent = '';
+
+  try {
+    _lpLineData = await lpParsePDF(file);
+
+    const pickingLines = Object.keys(_lpLineData).filter(k => _lpLineData[k].rawLocs.length > 0);
+    if (!pickingLines.length) {
+      lpShowError('No picking locations found. Make sure this is a Picking Slip PDF.');
+      return;
+    }
+
+    const summary = lpBuildSummary(_lpLineData);
+    _lpResolved  = summary.resolved;
+    _lpConflicts = summary.conflicts;
+    _lpPending   = _lpConflicts.slice();
+
+    if (_lpPending.length > 0) {
+      lpRenderConflicts();
+    } else {
+      lpShowResult();
+    }
+
+  } catch (err) {
+    console.error('Location Parser error:', err);
+    lpShowError('Could not read the PDF. Error: ' + (err.message || err));
+  }
+}
+
+// ── Wire up drop zone ─────────────────────────────────────────
+(function() {
+  const dz  = document.getElementById('lpDrop');
+  const inp = document.getElementById('lpFile');
+
+  dz.addEventListener('click', function() { inp.click(); });
+  inp.addEventListener('change', function(e) { if (e.target.files[0]) handleLPFile(e.target.files[0]); });
+
+  dz.addEventListener('dragover',  function(e) { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', function()  { dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleLPFile(e.dataTransfer.files[0]);
+  });
+})();
+
+function lpCopyLocations() {
+  if (!_lpLocationsSummary) return;
+  navigator.clipboard.writeText(_lpLocationsSummary);
+  const btn = document.getElementById('lpLocsBtn');
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+  setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+}
+
+function lpCopyDate7() {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  navigator.clipboard.writeText(mm + '/' + dd + '/' + yyyy);
+  const btn = document.getElementById('lpDateBtn');
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+  setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+}
+</script>
+
+<script>
+// ── Background flat wavy grid ──────────────────────────────────
+(function() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx    = canvas.getContext('2d');
+  let t = 0, W, H, rafId = null, paused = false;
+  const COLS   = 52;
+  const ROWS   = 38;
+  const pulses = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function spawnPulse() {
+    pulses.push({
+      x:      0.05 + Math.random() * 0.90,
+      y:      0.05 + Math.random() * 0.90,
+      rx:     0.07 + Math.random() * 0.13,
+      ry:     0.09 + Math.random() * 0.15,
+      age:    0,
+      maxAge: 70 + Math.floor(Math.random() * 60)
+    });
+  }
+
+  // Normalized-coord boost contributed by all active pulses at (nx, ny)
+  function pulseBoost(nx, ny) {
+    let boost = 0;
+    for (const p of pulses) {
+      const dx = (nx - p.x) / p.rx;
+      const dy = (ny - p.y) / p.ry;
+      const d2 = dx*dx + dy*dy;
+      if (d2 < 1) {
+        const life    = p.age / p.maxAge;
+        const fade    = life < 0.25 ? life / 0.25 : life > 0.70 ? (1 - life) / 0.30 : 1;
+        boost = Math.max(boost, (1 - d2) * fade * 0.50);
+      }
+    }
+    return boost;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Age pulses, cull dead ones, occasionally spawn new
+    for (let i = pulses.length - 1; i >= 0; i--) {
+      if (++pulses[i].age >= pulses[i].maxAge) pulses.splice(i, 1);
+    }
+    if (Math.random() < 0.025 && pulses.length < 8) spawnPulse();
+
+    const cw = W / COLS;
+    const rh = H / ROWS;
+
+    // Build displaced vertex grid
+    const pts = [];
+    for (let r = 0; r <= ROWS; r++) {
+      pts[r] = [];
+      for (let c = 0; c <= COLS; c++) {
+        const nx = c / COLS, ny = r / ROWS;
+        const dy = Math.sin(nx * Math.PI * 4        + t * 0.70) * (H * 0.022)
+                 + Math.sin(ny * Math.PI * 3        + t * 0.45) * (H * 0.018)
+                 + Math.sin((nx + ny) * Math.PI * 5 + t * 0.90) * (H * 0.010);
+        pts[r][c] = { x: c * cw, y: r * rh + dy };
+      }
+    }
+
+    // Horizontal lines — sample boost at several x positions along the row
+    for (let r = 0; r <= ROWS; r++) {
+      const ny = r / ROWS;
+      let boost = 0;
+      for (let c = 0; c <= COLS; c += 6) boost = Math.max(boost, pulseBoost(c / COLS, ny));
+      ctx.strokeStyle = `rgba(0,191,255,${0.28 + boost})`;
+      ctx.lineWidth   = 0.6 + boost * 1.0;
+      ctx.beginPath();
+      for (let c = 0; c <= COLS; c++) {
+        const p = pts[r][c];
+        c === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+
+    // Vertical lines — sample boost at several y positions along the column
+    for (let c = 0; c <= COLS; c++) {
+      const nx = c / COLS;
+      let boost = 0;
+      for (let r = 0; r <= ROWS; r += 5) boost = Math.max(boost, pulseBoost(nx, r / ROWS));
+      ctx.strokeStyle = `rgba(0,191,255,${0.22 + boost})`;
+      ctx.lineWidth   = 0.6 + boost * 1.0;
+      ctx.beginPath();
+      for (let r = 0; r <= ROWS; r++) {
+        const p = pts[r][c];
+        r === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+
+    t += 0.006;
+    rafId = requestAnimationFrame(draw);
+  }
+
+  window._bgPauseToggle = function() {
+    if (paused) {
+      paused = false;
+      rafId = requestAnimationFrame(draw);
+    } else {
+      paused = true;
+      cancelAnimationFrame(rafId);
+    }
+    const btn = document.getElementById('bgPauseBtn');
+    btn.textContent = paused ? '▶ Resume' : '⏸ Pause';
+  };
+
+  draw();
+})();
+</script>
+<button id="bgPauseBtn" onclick="window._bgPauseToggle()"
+  style="position:fixed;bottom:16px;left:16px;z-index:1000;
+         background:#1a1a1a;color:#444;border:1px solid #2a2a2a;
+         border-radius:5px;padding:5px 12px;font-size:0.72rem;font-weight:600;
+         text-transform:uppercase;letter-spacing:0.07em;cursor:pointer;
+         transition:color 0.15s,border-color 0.15s;">⏸ Pause</button>
+</body>
+</html>
