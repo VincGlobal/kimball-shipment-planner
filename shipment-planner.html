@@ -200,6 +200,47 @@
 
     .chevron { font-size: 0.75rem; color: #333; flex-shrink: 0; }
 
+    /* Set Date button */
+    .set-date-btn {
+      background: #1a1a2a; border: 1px solid rgba(0,191,255,0.4); color: #00bfff;
+      border-radius: 4px; padding: 5px 11px; cursor: pointer;
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+      white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+    }
+    .set-date-btn:hover { background: #1e2a3a; border-color: #00bfff; }
+    .set-date-btn.success { background: #0f1f0f; color: #8ade28; border-color: rgba(138,222,40,0.5); }
+    .set-date-btn.error   { background: #1f0f0f; color: #ff6b6b; border-color: rgba(255,107,107,0.4); }
+
+    /* Date modal */
+    #dateModal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.82); align-items:center; justify-content:center; }
+    #dateModal.open { display:flex; }
+    .date-modal-box {
+      background: #1a1a1a; border: 1px solid rgba(0,191,255,0.5); border-radius: 10px;
+      padding: 28px 32px; min-width: 320px; max-width: 420px;
+    }
+    .date-modal-lbl { font-size: 0.7rem; color: #888f91; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .date-modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 20px; font-family: 'Lexend', sans-serif; }
+    #dateModalInput {
+      width: 100%; background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 5px;
+      color: #fff; font-size: 1rem; padding: 8px 12px; font-family: inherit;
+      color-scheme: dark;
+    }
+    #dateModalInput:focus { outline: none; border-color: #00bfff; }
+    .date-modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    #dateModalSubmit {
+      flex: 1; background: #0d1f2a; color: #00bfff; border: 1px solid rgba(0,191,255,0.45);
+      border-radius: 5px; padding: 9px; cursor: pointer; font-size: 0.82rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em; transition: all 0.15s;
+    }
+    #dateModalSubmit:hover { background: #132030; }
+    #dateModalSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+    #dateModalCancel {
+      background: none; color: #444; border: 1px solid #252525; border-radius: 5px;
+      padding: 9px 18px; cursor: pointer; font-size: 0.82rem; transition: all 0.15s;
+    }
+    #dateModalCancel:hover { color: #888f91; border-color: #333; }
+    #dateModalStatus { margin-top: 14px; font-size: 0.8rem; min-height: 1.2em; }
+
     /* Copy button */
     .copy-btn {
       background: #1e1e1e; border: 1px solid #2e2e2e; color: #888f91;
@@ -807,6 +848,10 @@ function renderShipment(rows, shipmentNum, isAuto) {
             <span class="meta-lbl">Revenue</span>
           </div>
         </div>
+        <button class="set-date-btn"
+          data-linenos='${JSON.stringify(rows.map(r => r.line).filter(n => n != null))}'
+          data-shipnum="${shipmentNum}"
+          onclick="openDateModal(event, this)">Set Date</button>
         <button class="copy-btn"
           data-lines="${rows.length}" data-bags="${totalBags}"
           data-rev="${totalRev.toFixed(2)}" data-auto="${isAuto}"
@@ -1796,5 +1841,125 @@ function lpCopyDate7() {
          border-radius:5px;padding:5px 12px;font-size:0.72rem;font-weight:600;
          text-transform:uppercase;letter-spacing:0.07em;cursor:pointer;
          transition:color 0.15s,border-color 0.15s;">⏸ Pause</button>
+
+<!-- Date update modal -->
+<div id="dateModal">
+  <div class="date-modal-box">
+    <div class="date-modal-lbl">Set Ship Date in ERP</div>
+    <div id="dateModalTitle" class="date-modal-title"></div>
+    <input type="date" id="dateModalInput">
+    <div class="date-modal-actions">
+      <button id="dateModalSubmit" onclick="submitDateUpdate()">Update ERP</button>
+      <button id="dateModalCancel" onclick="closeDateModal()">Cancel</button>
+    </div>
+    <div id="dateModalStatus"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const PROXY = 'https://kimball-proxy.vercel.app/api/update-dates';
+  let _activeBtn = null;
+
+  window.openDateModal = function(evt, btn) {
+    evt.stopPropagation();
+    _activeBtn = btn;
+    const soNum = document.getElementById('soInput').value.trim();
+    const shipNum = btn.dataset.shipnum;
+    document.getElementById('dateModalTitle').textContent =
+      'Shipment ' + soNum + '-' + shipNum;
+    const status = document.getElementById('dateModalStatus');
+    status.textContent = '';
+    status.style.color = '';
+    document.getElementById('dateModalSubmit').disabled = false;
+    document.getElementById('dateModalInput').value = '';
+    document.getElementById('dateModal').classList.add('open');
+    document.getElementById('dateModalInput').focus();
+  };
+
+  window.closeDateModal = function() {
+    document.getElementById('dateModal').classList.remove('open');
+    _activeBtn = null;
+  };
+
+  // Close on backdrop click
+  document.getElementById('dateModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDateModal();
+  });
+
+  // Submit on Enter
+  document.getElementById('dateModalInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitDateUpdate();
+    if (e.key === 'Escape') closeDateModal();
+  });
+
+  window.submitDateUpdate = async function() {
+    const dateVal = document.getElementById('dateModalInput').value;
+    if (!dateVal) {
+      const s = document.getElementById('dateModalStatus');
+      s.textContent = 'Please pick a date.';
+      s.style.color = '#ff6b6b';
+      return;
+    }
+    const soNum = document.getElementById('soInput').value.trim();
+    if (!soNum) {
+      const s = document.getElementById('dateModalStatus');
+      s.textContent = 'Sales Order # is missing.';
+      s.style.color = '#ff6b6b';
+      return;
+    }
+    const rawLines = _activeBtn ? JSON.parse(_activeBtn.dataset.linenos || '[]') : [];
+    const lineNumbers = rawLines.map(Number).filter(n => !isNaN(n) && n > 0);
+    if (!lineNumbers.length) {
+      const s = document.getElementById('dateModalStatus');
+      s.textContent = 'No line numbers found on this card.';
+      s.style.color = '#ff6b6b';
+      return;
+    }
+
+    const submitBtn = document.getElementById('dateModalSubmit');
+    const status = document.getElementById('dateModalStatus');
+    submitBtn.disabled = true;
+    status.textContent = 'Updating ERP…';
+    status.style.color = '#888f91';
+
+    try {
+      const resp = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: parseInt(soNum, 10) || soNum,
+          lineNumbers,
+          wantedDate: dateVal,
+        }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) {
+        status.textContent = 'Error: ' + (json.error || resp.status);
+        status.style.color = '#ff6b6b';
+        submitBtn.disabled = false;
+        return;
+      }
+      if (json.failed > 0) {
+        status.textContent = json.updated + ' updated, ' + json.failed + ' failed.';
+        status.style.color = '#ffaa00';
+      } else {
+        status.textContent = json.updated + ' line' + (json.updated !== 1 ? 's' : '') + ' updated to ' + dateVal + '.';
+        status.style.color = '#8ade28';
+        if (_activeBtn) {
+          _activeBtn.classList.add('success');
+          _activeBtn.textContent = dateVal;
+          setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
+        }
+        setTimeout(closeDateModal, 1800);
+      }
+    } catch (err) {
+      status.textContent = 'Network error: ' + err.message;
+      status.style.color = '#ff6b6b';
+      submitBtn.disabled = false;
+    }
+  };
+})();
+</script>
 </body>
 </html>
