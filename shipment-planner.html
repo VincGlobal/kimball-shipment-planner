@@ -241,6 +241,46 @@
     #dateModalCancel:hover { color: #888f91; border-color: #333; }
     #dateModalStatus { margin-top: 14px; font-size: 0.8rem; min-height: 1.2em; }
 
+    /* ERP update in-progress */
+    #dateModalWrap { display: flex; flex-direction: column; align-items: center; }
+    #dateModalBanner {
+      display: none; flex-direction: column; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    #dateModalBanner.visible { display: flex; }
+    #dateModalBannerText {
+      font-family: 'Courier New', monospace; font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.13em; color: #00ff41; text-transform: uppercase;
+    }
+    .erp-load-bar { display: flex; gap: 5px; }
+    .erp-seg { width: 20px; height: 11px; background: #00ff41; border-radius: 2px; }
+    @keyframes erp-neon-pulse {
+      0%, 100% { box-shadow: 0 0 6px #00ff41, 0 0 18px #00ff41, 0 0 36px rgba(0,255,65,0.35); }
+      50%       { box-shadow: 0 0 14px #00ff41, 0 0 38px #00ff41, 0 0 75px rgba(0,255,65,0.55); }
+    }
+    @keyframes erp-text-pulse {
+      0%, 100% { opacity: 0.75; text-shadow: 0 0 5px #00ff41; }
+      50%       { opacity: 1;   text-shadow: 0 0 12px #00ff41, 0 0 24px #00ff41; }
+    }
+    @keyframes erp-seg-wave {
+      0%, 100% { opacity: 0.15; }
+      50%       { opacity: 1; }
+    }
+    .date-modal-box.erp-updating { border-color: #00ff41; animation: erp-neon-pulse 1.2s ease-in-out infinite; }
+    #dateModalBannerText { animation: erp-text-pulse 1.2s ease-in-out infinite; }
+    .erp-seg:nth-child(1)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.00s; }
+    .erp-seg:nth-child(2)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.10s; }
+    .erp-seg:nth-child(3)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.20s; }
+    .erp-seg:nth-child(4)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.30s; }
+    .erp-seg:nth-child(5)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.40s; }
+    .erp-seg:nth-child(6)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.50s; }
+    .erp-seg:nth-child(7)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.60s; }
+    .erp-seg:nth-child(8)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.70s; }
+    .erp-seg:nth-child(9)  { animation: erp-seg-wave 1.4s ease-in-out infinite 0.80s; }
+    .erp-seg:nth-child(10) { animation: erp-seg-wave 1.4s ease-in-out infinite 0.90s; }
+    .erp-seg:nth-child(11) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.00s; }
+    .erp-seg:nth-child(12) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.10s; }
+
     /* Copy button */
     .copy-btn {
       background: #1e1e1e; border: 1px solid #2e2e2e; color: #888f91;
@@ -1844,15 +1884,26 @@ function lpCopyDate7() {
 
 <!-- Date update modal -->
 <div id="dateModal">
-  <div class="date-modal-box">
-    <div class="date-modal-lbl">Set Ship Date in ERP</div>
-    <div id="dateModalTitle" class="date-modal-title"></div>
-    <input type="date" id="dateModalInput">
-    <div class="date-modal-actions">
-      <button id="dateModalSubmit" onclick="submitDateUpdate()">Update ERP</button>
-      <button id="dateModalCancel" onclick="closeDateModal()">Cancel</button>
+  <div id="dateModalWrap">
+    <div id="dateModalBanner">
+      <div id="dateModalBannerText">⚠ PLEASE WAIT: UPDATE IN PROGRESS</div>
+      <div class="erp-load-bar">
+        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
+        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
+        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
+        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
+      </div>
     </div>
-    <div id="dateModalStatus"></div>
+    <div class="date-modal-box" id="dateModalBox">
+      <div class="date-modal-lbl">Set Ship Date in ERP</div>
+      <div id="dateModalTitle" class="date-modal-title"></div>
+      <input type="date" id="dateModalInput">
+      <div class="date-modal-actions">
+        <button id="dateModalSubmit" onclick="submitDateUpdate()">Update ERP</button>
+        <button id="dateModalCancel" onclick="closeDateModal()">Cancel</button>
+      </div>
+      <div id="dateModalStatus"></div>
+    </div>
   </div>
 </div>
 
@@ -1860,6 +1911,13 @@ function lpCopyDate7() {
 (function() {
   const PROXY = 'https://kimball-proxy.vercel.app/api/update-dates';
   let _activeBtn = null;
+  let _updating = false;
+
+  function setUpdating(on) {
+    _updating = on;
+    document.getElementById('dateModalBox').classList.toggle('erp-updating', on);
+    document.getElementById('dateModalBanner').classList.toggle('visible', on);
+  }
 
   window.openDateModal = function(evt, btn) {
     evt.stopPropagation();
@@ -1879,19 +1937,21 @@ function lpCopyDate7() {
   };
 
   window.closeDateModal = function() {
+    if (_updating) return;
     document.getElementById('dateModal').classList.remove('open');
+    setUpdating(false);
     _activeBtn = null;
   };
 
-  // Close on backdrop click
+  // Close on backdrop click — blocked while updating
   document.getElementById('dateModal').addEventListener('click', function(e) {
-    if (e.target === this) closeDateModal();
+    if (e.target === this && !_updating) closeDateModal();
   });
 
-  // Submit on Enter
+  // Keyboard shortcuts — Escape blocked while updating
   document.getElementById('dateModalInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') submitDateUpdate();
-    if (e.key === 'Escape') closeDateModal();
+    if (e.key === 'Escape' && !_updating) closeDateModal();
   });
 
   window.submitDateUpdate = async function() {
@@ -1923,6 +1983,7 @@ function lpCopyDate7() {
     submitBtn.disabled = true;
     status.textContent = 'Updating ERP…';
     status.style.color = '#888f91';
+    setUpdating(true);
 
     try {
       const resp = await fetch(PROXY, {
@@ -1939,26 +2000,30 @@ function lpCopyDate7() {
         status.textContent = 'Error: ' + (json.error || resp.status);
         status.style.color = '#ff6b6b';
         submitBtn.disabled = false;
+        setUpdating(false);
         return;
       }
+      const [y, m, d] = dateVal.split('-');
       if (json.failed > 0) {
         status.textContent = json.updated + ' updated, ' + json.failed + ' failed.';
         status.style.color = '#ffaa00';
+        setUpdating(false);
       } else {
         status.textContent = json.updated + ' line' + (json.updated !== 1 ? 's' : '') + ' updated to ' + m + '/' + d + '/' + y + '.';
         status.style.color = '#8ade28';
         if (_activeBtn) {
           _activeBtn.classList.add('success');
-          const [y, m, d] = dateVal.split('-');
           _activeBtn.textContent = m + '/' + d + '/' + y;
           setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
         }
+        setUpdating(false);
         setTimeout(closeDateModal, 1800);
       }
     } catch (err) {
       status.textContent = 'Network error: ' + err.message;
       status.style.color = '#ff6b6b';
       submitBtn.disabled = false;
+      setUpdating(false);
     }
   };
 })();
