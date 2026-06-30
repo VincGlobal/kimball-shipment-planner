@@ -124,6 +124,7 @@
       letter-spacing: 0.09em; margin-bottom: 6px;
     }
     .summary-card .s-value { font-size: 1.55rem; font-weight: 700; }
+    .summary-card .s-sub  { font-size: 0.66rem; color: #444; margin-top: 3px; letter-spacing: 0.02em; }
     .summary-card:nth-child(2) { animation-delay: 0.5s; }
     .summary-card:nth-child(3) { animation-delay: 1.0s; }
     .summary-card:nth-child(4) { animation-delay: 1.5s; }
@@ -1056,6 +1057,8 @@ function processCSV(text) {
   const itemCol  = col('item');
   const comCol   = col('com');
   const priceCol = col('price');
+  const totalCol = col('total');
+  const openCol  = col('open');
 
   if (itemCol === -1 || comCol === -1 || priceCol === -1) {
     alert(`Missing required columns.\nFound: ${headers.join(', ')}\n\nNeed: Item, Com, Price`);
@@ -1063,6 +1066,7 @@ function processCSV(text) {
   }
 
   const eligible = [], remaining = [], noCommit = [], allCommitted = [];
+  let totalRevAll = 0, openCount = 0, closedCount = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
@@ -1072,6 +1076,15 @@ function processCSV(text) {
     const price = parseNum(r[priceCol]);
     const line  = lineCol >= 0 ? (r[lineCol] || '').trim() : String(i);
     if (!item) continue;
+
+    // Accumulate all-lines revenue and open/closed counts before com filter
+    const lineTotal = totalCol >= 0 ? parseNum(r[totalCol]) : com * price;
+    totalRevAll += lineTotal;
+    const isOpen = openCol >= 0
+      ? (r[openCol] || '').trim().toLowerCase() === 'yes'
+      : com > 0;
+    if (isOpen) openCount++; else closedCount++;
+
     const isKit  = item.toUpperCase().startsWith('KIT');
     const isGage = item.toUpperCase().startsWith('GAGE');
     const rec = { line, item, com, price, isKit, isGage };
@@ -1112,14 +1125,13 @@ function processCSV(text) {
 
   if (simpleMode) {
     const totalBags = allCommitted.reduce((s, r) => s + (r.isKit || r.isGage ? 0 : r.com), 0);
-    const totalRev  = allCommitted.reduce((s, r) => s + r.com * r.price, 0);
     sb.innerHTML = `<div class="summary">
-      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(allCommitted.length + noCommit.length)}</div></div>
+      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(openCount + closedCount)}</div><div class="s-sub">${fmtN(openCount)} open &middot; ${fmtN(closedCount)} closed</div></div>
       <div class="summary-card"><div class="s-label">Committed Lines</div><div class="s-value" style="color:#00bfff">${fmtN(allCommitted.length)}</div></div>
       <div class="summary-card"><div class="s-label">Shipments</div><div class="s-value" style="color:#00bfff">${fmtN(stdShipments.length)}</div></div>
       <div class="summary-card"><div class="s-label">Total Bags</div><div class="s-value" style="color:#00bfff">${fmtN(totalBags)}</div></div>
       ${kitSummaryCard}
-      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#00bfff; font-size:1.35rem">${fmt$(totalRev)}</div></div>
+      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#00bfff; font-size:1.35rem">${fmt$(totalRevAll)}</div></div>
       <div class="summary-card"><div class="s-label">No Commit (Skipped)</div><div class="s-value" style="color:#2e2e2e">${fmtN(noCommit.length)}</div></div>
     </div>`;
   } else {
@@ -1128,8 +1140,8 @@ function processCSV(text) {
     const totalBagsStd  = remaining.reduce((s, r) => s + (r.isKit || r.isGage ? 0 : r.com), 0);
     const totalRevStd   = remaining.reduce((s, r) => s + r.com * r.price, 0);
     sb.innerHTML = `<div class="summary">
-      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(eligible.length + remaining.length + noCommit.length)}</div></div>
-      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#fff; font-size:1.35rem">${fmt$(totalRevAuto + totalRevStd)}</div></div>
+      <div class="summary-card"><div class="s-label">Total Lines</div><div class="s-value" style="color:#fff">${fmtN(openCount + closedCount)}</div><div class="s-sub">${fmtN(openCount)} open &middot; ${fmtN(closedCount)} closed</div></div>
+      <div class="summary-card"><div class="s-label">Total Revenue</div><div class="s-value" style="color:#fff; font-size:1.35rem">${fmt$(totalRevAll)}</div></div>
       <div class="summary-card"><div class="s-label">Autobagger Lines</div><div class="s-value" style="color:#00bfff">${fmtN(eligible.length)}</div></div>
       <div class="summary-card"><div class="s-label">Auto Bags</div><div class="s-value" style="color:#00bfff">${fmtN(totalBagsAuto)}</div></div>
       <div class="summary-card"><div class="s-label">Auto Revenue</div><div class="s-value" style="color:#00bfff; font-size:1.35rem">${fmt$(totalRevAuto)}</div></div>
