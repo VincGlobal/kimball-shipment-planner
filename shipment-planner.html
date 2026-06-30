@@ -607,6 +607,19 @@
         </select>
         <style>#shipToInput:focus { outline:none; border-color:#00bfff; } #shipToInput option { background:#1e1e1e; color:#fff; }</style>
       </div>
+      <div class="so-row" id="orderPickerRow">
+        <span class="so-label">Open Order</span>
+        <select id="orderPicker" onchange="onOrderPick()"
+          style="background:#1e1e1e; border:1px solid rgba(0,191,255,0.45); border-radius:5px; color:#888f91;
+                 font-size:0.82rem; font-weight:600; padding:7px 32px 7px 14px; min-width:300px;
+                 font-family:'Lexend',sans-serif; cursor:pointer; appearance:none; -webkit-appearance:none;
+                 background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path fill=%22%2300bfff%22 d=%22M6 8L1 3h10z%22/></svg>');
+                 background-repeat:no-repeat; background-position:right 12px center;
+                 animation:borderPulse 3s ease-in-out infinite;">
+          <option value="">Loading orders…</option>
+        </select>
+        <style>#orderPicker:focus { outline:none; border-color:#00bfff; animation:none; } #orderPicker option { background:#1e1e1e; color:#fff; }</style>
+      </div>
       <button id="copyAllBtn" onclick="copyAll()">Copy All Shipments</button>
     </div>
     <div style="margin-top:8px;">
@@ -1871,6 +1884,73 @@ function lpCopyDate7() {
   btn.classList.add('copied');
   setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
 }
+
+// ── Open Order Picker ─────────────────────────────────────────
+(function() {
+  var OPEN_ORDERS_URL = 'https://kimball-proxy.vercel.app/api/open-orders';
+  var _orders = [];
+
+  function normAddr(s) {
+    return (s || '').toUpperCase()
+      .replace(/\bROAD\b/, 'RD').replace(/\bBOULEVARD\b/, 'BLVD')
+      .replace(/\bDRIVE\b/, 'DR').replace(/\bSTREET\b/, 'ST')
+      .replace(/\bAVENUE\b/, 'AVE').replace(/\s+/g, ' ').trim();
+  }
+
+  fetch(OPEN_ORDERS_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(orders) {
+      _orders = orders;
+      var sel = document.getElementById('orderPicker');
+      sel.innerHTML = '<option value="">— Select open order —</option>';
+      sel.style.color = '#fff';
+      orders.forEach(function(o, i) {
+        var opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = o.orderNumber + '  —  ' + o.po + '  —  ' + o.address
+          + '  (' + o.openLines + ' open / ' + o.totalLines + ' lines)';
+        sel.appendChild(opt);
+      });
+    })
+    .catch(function() {
+      var sel = document.getElementById('orderPicker');
+      sel.innerHTML = '<option value="">— Could not load orders —</option>';
+    });
+
+  window.onOrderPick = function() {
+    var sel = document.getElementById('orderPicker');
+    var idx = parseInt(sel.value, 10);
+    if (isNaN(idx)) return;
+    var o = _orders[idx];
+    if (!o) return;
+
+    document.getElementById('soInput').value = String(o.orderNumber);
+    document.getElementById('poInput').value  = o.po;
+
+    // Match ship-to address against dropdown options
+    var shipSel  = document.getElementById('shipToInput');
+    var target   = normAddr(o.address);
+    var matched  = false;
+    for (var i = 0; i < shipSel.options.length; i++) {
+      if (normAddr(shipSel.options[i].value) === target) {
+        shipSel.value = shipSel.options[i].value;
+        matched = true; break;
+      }
+    }
+    // Fallback: partial match on street number + first word
+    if (!matched) {
+      var firstWord = target.split(' ').slice(0, 2).join(' ');
+      for (var j = 0; j < shipSel.options.length; j++) {
+        if (normAddr(shipSel.options[j].value).startsWith(firstWord)) {
+          shipSel.value = shipSel.options[j].value;
+          break;
+        }
+      }
+    }
+
+    if (typeof updateOverlay === 'function') updateOverlay();
+  };
+})();
 
 // Auto-refresh the Set Ship Date panel whenever a shipment number is edited
 document.getElementById('mainContent').addEventListener('input', function(e) {
