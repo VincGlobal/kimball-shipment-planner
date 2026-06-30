@@ -460,6 +460,7 @@
     /* Global date modal */
     #globalDateModal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; }
     #globalDateModal.open { display:flex; }
+    #gdmWrap { display:flex; flex-direction:column; align-items:center; }
     #gdmBanner { display:none; flex-direction:column; align-items:center; gap:10px; margin-bottom:16px; }
     #gdmBanner.visible { display:flex; }
     #gdmBannerText {
@@ -2021,6 +2022,7 @@ function lpCopyDate7() {
 
   // ── Global date update ─────────────────────────────────────────
   let _globalUpdating = false;
+  let _gdmBtns = []; // captured at modal-open time
 
   function setGlobalUpdating(on) {
     _globalUpdating = on;
@@ -2042,10 +2044,10 @@ function lpCopyDate7() {
   window.openGlobalDateModal = function() {
     const listEl = document.getElementById('gdmShipList');
     listEl.innerHTML = '';
-    const btns  = Array.from(document.querySelectorAll('.set-date-btn'));
+    _gdmBtns = Array.from(document.querySelectorAll('.set-date-btn'));
     const soNum = (document.getElementById('soInput').value.trim() || '______');
 
-    btns.forEach(function(btn, i) {
+    _gdmBtns.forEach(function(btn, i) {
       const card    = btn.closest('.shipment-card');
       const shipNum = card ? card.querySelector('.shipment-num-input').value : (i + 1);
       const lines   = JSON.parse(btn.dataset.linenos || '[]').length;
@@ -2085,66 +2087,77 @@ function lpCopyDate7() {
   });
 
   window.submitGlobalDateUpdate = async function() {
-    const dateVal = document.getElementById('gdmDate').value;
-    const status  = document.getElementById('gdmStatus');
-    if (!dateVal) { status.textContent = 'Please pick a date.'; status.style.color = '#ff6b6b'; return; }
-    const soNum = document.getElementById('soInput').value.trim();
-    if (!soNum)  { status.textContent = 'Sales Order # is missing.'; status.style.color = '#ff6b6b'; return; }
+    const status = document.getElementById('gdmStatus');
+    try {
+      const dateVal = document.getElementById('gdmDate').value;
+      if (!dateVal) { status.textContent = 'Please pick a date.'; status.style.color = '#ff6b6b'; return; }
+      const soNum = document.getElementById('soInput').value.trim();
+      if (!soNum)  { status.textContent = 'Sales Order # is missing.'; status.style.color = '#ff6b6b'; return; }
 
-    const allBtns    = Array.from(document.querySelectorAll('.set-date-btn'));
-    const checkboxes = Array.from(document.querySelectorAll('#gdmShipList input[type=checkbox]'));
-    const selected   = allBtns.filter(function(_, i) { return checkboxes[i] && checkboxes[i].checked; });
-    if (!selected.length) return;
+      // Use button refs captured at open time, filtered by their checkbox state
+      const selected = _gdmBtns.filter(function(_, i) {
+        const chk = document.getElementById('gdm-chk-' + i);
+        return chk && chk.checked;
+      });
+      if (!selected.length) { status.textContent = 'No shipments selected.'; status.style.color = '#ff6b6b'; return; }
 
-    const submitBtn = document.getElementById('gdmSubmit');
-    const progress  = document.getElementById('gdmProgress');
-    submitBtn.disabled = true;
-    status.textContent = '';
-    setGlobalUpdating(true);
+      const submitBtn = document.getElementById('gdmSubmit');
+      const progress  = document.getElementById('gdmProgress');
+      submitBtn.disabled = true;
+      status.textContent = 'Starting…';
+      status.style.color = '#888f91';
+      setGlobalUpdating(true);
 
-    const [y, m, d] = dateVal.split('-');
-    const dateStr = m + '/' + d + '/' + y;
-    const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-    let updated = 0, failed = 0;
+      const [y, m, d] = dateVal.split('-');
+      const dateStr = m + '/' + d + '/' + y;
+      const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      let updated = 0, failed = 0;
 
-    for (let i = 0; i < selected.length; i++) {
-      const btn = selected[i];
-      progress.textContent = 'Updating ' + (i + 1) + ' of ' + selected.length + '…';
-      const rawLines   = JSON.parse(btn.dataset.linenos || '[]');
-      const lineNumbers = rawLines.map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
-      if (!lineNumbers.length) { failed++; continue; }
-      try {
-        const resp = await fetch(PROXY, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderNumber: parseInt(soNum, 10) || soNum, lineNumbers, wantedDate: dateVal }),
-        });
-        const json = await resp.json();
-        if (resp.ok && json.failed === 0) {
-          updated++;
-          btn.classList.add('success');
-          btn.textContent = dateStr;
-          btn.dataset.setDate = dateStr;
-          if (!btn.nextElementSibling || !btn.nextElementSibling.classList.contains('copy-date-btn')) {
-            const cb = document.createElement('button');
-            cb.className = 'copy-date-btn'; cb.title = 'Copy date'; cb.innerHTML = COPY_SVG;
-            cb.onclick = function(e) { copySetDate(e, this); };
-            btn.insertAdjacentElement('afterend', cb);
-          }
-          (function(b) { setTimeout(function() { b.textContent = 'Set Date'; b.classList.remove('success'); }, 4000); })(btn);
-        } else { failed++; }
-      } catch (err) { failed++; }
-    }
+      for (let i = 0; i < selected.length; i++) {
+        const btn = selected[i];
+        progress.textContent = 'Updating ' + (i + 1) + ' of ' + selected.length + '…';
+        const rawLines    = JSON.parse(btn.dataset.linenos || '[]');
+        const lineNumbers = rawLines.map(Number).filter(function(n) { return !isNaN(n) && n > 0; });
+        if (!lineNumbers.length) { failed++; continue; }
+        try {
+          const resp = await fetch(PROXY, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderNumber: parseInt(soNum, 10) || soNum, lineNumbers, wantedDate: dateVal }),
+          });
+          const json = await resp.json();
+          if (resp.ok && json.failed === 0) {
+            updated++;
+            btn.classList.add('success');
+            btn.textContent = dateStr;
+            btn.dataset.setDate = dateStr;
+            if (!btn.nextElementSibling || !btn.nextElementSibling.classList.contains('copy-date-btn')) {
+              const cb = document.createElement('button');
+              cb.className = 'copy-date-btn'; cb.title = 'Copy date'; cb.innerHTML = COPY_SVG;
+              cb.onclick = function(e) { copySetDate(e, this); };
+              btn.insertAdjacentElement('afterend', cb);
+            }
+            (function(b) { setTimeout(function() { b.textContent = 'Set Date'; b.classList.remove('success'); }, 4000); })(btn);
+          } else { failed++; }
+        } catch (err) { failed++; }
+      }
 
-    setGlobalUpdating(false);
-    progress.textContent = '';
-    if (failed === 0) {
-      status.textContent = 'All ' + updated + ' shipment' + (updated !== 1 ? 's' : '') + ' updated to ' + dateStr + '.';
-      status.style.color = '#8ade28';
-      setTimeout(closeGlobalDateModal, 2200);
-    } else {
-      status.textContent = updated + ' updated, ' + failed + ' failed.';
-      status.style.color = (failed === selected.length) ? '#ff6b6b' : '#ffaa00';
-      submitBtn.disabled = false;
+      setGlobalUpdating(false);
+      progress.textContent = '';
+      if (failed === 0) {
+        status.textContent = 'All ' + updated + ' shipment' + (updated !== 1 ? 's' : '') + ' updated to ' + dateStr + '.';
+        status.style.color = '#8ade28';
+        setTimeout(closeGlobalDateModal, 2200);
+      } else {
+        status.textContent = updated + ' updated, ' + failed + ' failed.';
+        status.style.color = (failed === selected.length) ? '#ff6b6b' : '#ffaa00';
+        submitBtn.disabled = false;
+      }
+    } catch (err) {
+      status.textContent = 'Error: ' + err.message;
+      status.style.color = '#ff6b6b';
+      setGlobalUpdating(false);
+      var sb = document.getElementById('gdmSubmit');
+      if (sb) sb.disabled = false;
     }
   };
 
@@ -2235,7 +2248,7 @@ function lpCopyDate7() {
 </script>
 <!-- Global date update modal -->
 <div id="globalDateModal">
-  <div id="dateModalWrap">
+  <div id="gdmWrap">
     <div id="gdmBanner">
       <div id="gdmBannerText">⚠ PLEASE WAIT: UPDATE IN PROGRESS</div>
       <div class="erp-load-bar">
@@ -2261,7 +2274,7 @@ function lpCopyDate7() {
       <div id="gdmProgress"></div>
     </div>
   </div>
-</div>
+</div>  <!-- end #globalDateModal -->
 
 </body>
 </html>
