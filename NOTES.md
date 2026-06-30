@@ -15,6 +15,14 @@ For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && n
 
 ## What the tool does
 
+### Open Order Picker (top bar)
+- On page load, fetches all open KIMMID orders live from the ERP via `/api/open-orders` on the proxy
+- Dropdown shows each order as: `829678  —  IM300868  —  4800 ROBERTS ROAD  (150 open / 288 lines)`
+- Selecting an order instantly fills **Sales Order #**, **Customer PO #**, and **Ship To**
+- Ship To matching normalizes address abbreviations (ROAD→RD, BOULEVARD→BLVD, etc.) to match the hardcoded dropdown options
+- Falls back gracefully with a "Could not load orders" message if the proxy is unreachable
+- Proxy endpoint: `GET /api/open-orders` — queries ERP for `customer.customer=KIMMID&open=1`, returns `[{ orderNumber, po, address, openLines, totalLines }]`
+
 ### CSV Shipment Planner (main panel)
 - Drop or browse a sales order CSV exported from 10X ERP
 - Full CSV columns used: `Line, Notes, Image, Item, Description, UM, Ord, Com, Ship, SC, WO, BO, PO, TO, FO, Price, MP, Cost, MC, GP%, Total, Tax, Wanted Date, Open, Item Block`
