@@ -281,16 +281,16 @@
     .erp-seg:nth-child(11) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.00s; }
     .erp-seg:nth-child(12) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.10s; }
 
-    /* Copy-date button (appears after date is set) */
+    /* Copy-date icon button (appears after date is set) */
     .copy-date-btn {
       display: none;
-      background: #1a2a1a; border: 1px solid rgba(138,222,40,0.4); color: #8ade28;
-      border-radius: 4px; padding: 5px 11px; cursor: pointer;
-      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
-      white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+      background: #252525; border: 1px solid #333; color: #888f91;
+      border-radius: 6px; padding: 5px 7px; cursor: pointer;
+      flex-shrink: 0; transition: all 0.15s; line-height: 0;
     }
-    .copy-date-btn:hover { background: #1f2f1f; border-color: #8ade28; }
-    .copy-date-btn.copied { color: #fff; border-color: #8ade28; }
+    .copy-date-btn svg { display: block; width: 14px; height: 14px; }
+    .copy-date-btn:hover { background: #2e2e2e; border-color: #555; color: #fff; }
+    .copy-date-btn.copied { background: #0f1f0f; border-color: rgba(138,222,40,0.4); color: #8ade28; }
 
     /* Copy button */
     .copy-btn {
@@ -903,7 +903,7 @@ function renderShipment(rows, shipmentNum, isAuto) {
           data-linenos='${JSON.stringify(rows.map(r => r.line).filter(n => n != null))}'
           data-shipnum="${shipmentNum}"
           onclick="openDateModal(event, this)">Set Date</button>
-        <button class="copy-date-btn" onclick="copySetDate(event, this)">📋 Date</button>
+        <button class="copy-date-btn" title="Copy date" onclick="copySetDate(event, this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         <button class="copy-btn"
           data-lines="${rows.length}" data-bags="${totalBags}"
           data-rev="${totalRev.toFixed(2)}" data-auto="${isAuto}"
@@ -1977,9 +1977,7 @@ function lpCopyDate7() {
       document.execCommand('copy'); document.body.removeChild(ta);
     });
     btn.classList.add('copied');
-    const orig = btn.textContent;
-    btn.textContent = '✓ Copied';
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    setTimeout(() => { btn.classList.remove('copied'); }, 1500);
   };
 
   window.submitDateUpdate = async function() {
@@ -2046,7 +2044,7 @@ function lpCopyDate7() {
           _activeBtn.dataset.setDate = dateStr;
           const copyDateBtn = _activeBtn.nextElementSibling;
           if (copyDateBtn && copyDateBtn.classList.contains('copy-date-btn')) {
-            copyDateBtn.style.display = '';
+            copyDateBtn.style.display = 'inline-block';
           }
           setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
         }
