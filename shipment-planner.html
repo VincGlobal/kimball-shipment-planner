@@ -459,11 +459,16 @@
 
     /* Set Ship Date panel (sidebar) */
     #gdmPanel {
-      flex-shrink: 0;
-      border-top: 1px solid rgba(138,222,40,0.25);
-      padding: 11px 14px 14px;
+      width: 220px; flex-shrink: 0;
       background: #0e160e;
+      border-left: 1px solid rgba(138,222,40,0.25);
+      display: flex; flex-direction: column; overflow: hidden;
       transition: border-color 0.3s, box-shadow 0.3s;
+      animation: gdmBorderPulse 3s ease-in-out infinite;
+    }
+    @keyframes gdmBorderPulse {
+      0%, 100% { border-left-color: rgba(138,222,40,0.25); }
+      50%       { border-left-color: rgba(138,222,40,0.65); }
     }
     #gdmPanel.erp-updating {
       border-color: #00ff41;
@@ -471,15 +476,11 @@
     }
     .gdm-panel-hdr {
       font-size:0.64rem; font-weight:800; text-transform:uppercase;
-      letter-spacing:0.1em; color:#8ade28; margin-bottom:8px;
-      display:flex; justify-content:space-between; align-items:center;
+      letter-spacing:0.1em; color:#8ade28;
+      padding: 11px 14px; border-bottom: 1px solid rgba(138,222,40,0.25);
+      text-align: center; flex-shrink: 0;
     }
-    .gdm-refresh-btn {
-      background:none; border:1px solid #2a3a2a; color:#4a6a4a;
-      border-radius:3px; padding:1px 6px; cursor:pointer; font-size:0.8rem;
-      transition:all 0.15s; line-height:1.4;
-    }
-    .gdm-refresh-btn:hover { color:#8ade28; border-color:rgba(138,222,40,0.4); }
+    .gdm-body { flex: 1; overflow-y: auto; padding: 11px 14px 14px; }
     .gdm-select-all-row {
       display:flex; align-items:center; gap:8px; padding:3px 0 7px; border-bottom:1px solid #1a2a1a; margin-bottom:4px;
     }
@@ -679,6 +680,25 @@
   </div>
 </div><!-- end #mainContent -->
 
+<!-- ── Set Ship Date Sidebar ──────────────────────────────── -->
+<div id="gdmPanel">
+  <div class="gdm-panel-hdr">Set Ship Date</div>
+  <div class="gdm-body">
+    <div class="gdm-select-all-row">
+      <input type="checkbox" id="gdmSelectAll" checked onchange="toggleGdmSelectAll(this)">
+      <label for="gdmSelectAll">Select All</label>
+    </div>
+    <div id="gdmShipList" class="gdm-ship-list">
+      <div class="gdm-empty-note">Load a CSV to see shipments</div>
+    </div>
+    <input type="date" id="gdmDate" class="gdm-date-input">
+    <button id="gdmSubmit" class="gdm-submit-btn" onclick="submitGlobalDateUpdate()" disabled>Update Shipments</button>
+    <div id="gdmStatus"></div>
+    <div id="gdmProgress"></div>
+    <div id="gdmElapsed"></div>
+  </div>
+</div>
+
 <!-- ── Location Parser Sidebar ──────────────────────────────── -->
 <div id="locationPanel">
   <div class="lp-header">
@@ -744,27 +764,7 @@
 
   </div><!-- end lp-body -->
 
-  <!-- Set Ship Date panel -->
-  <div id="gdmPanel">
-    <div class="gdm-panel-hdr">
-      📅 Set Ship Date
-      <button class="gdm-refresh-btn" onclick="refreshGdmPanel()" title="Refresh list">↺</button>
-    </div>
-    <div class="gdm-select-all-row">
-      <input type="checkbox" id="gdmSelectAll" checked onchange="toggleGdmSelectAll(this)">
-      <label for="gdmSelectAll">Select All</label>
-    </div>
-    <div id="gdmShipList" class="gdm-ship-list">
-      <div class="gdm-empty-note">Load a CSV to see shipments</div>
-    </div>
-    <input type="date" id="gdmDate" class="gdm-date-input">
-    <button id="gdmSubmit" class="gdm-submit-btn" onclick="submitGlobalDateUpdate()" disabled>Update Shipments</button>
-    <div id="gdmStatus"></div>
-    <div id="gdmProgress"></div>
-    <div id="gdmElapsed"></div>
-  </div>
-
-</div>
+</div><!-- end #locationPanel -->
 </div><!-- end .content-row -->
 
 <script>
@@ -1850,6 +1850,13 @@ function lpCopyDate7() {
   btn.classList.add('copied');
   setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
 }
+
+// Auto-refresh the Set Ship Date panel whenever a shipment number is edited
+document.getElementById('mainContent').addEventListener('input', function(e) {
+  if (e.target.classList.contains('shipment-num-input') && typeof refreshGdmPanel === 'function') {
+    refreshGdmPanel();
+  }
+});
 </script>
 
 <script>
