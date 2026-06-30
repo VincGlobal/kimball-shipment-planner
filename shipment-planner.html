@@ -481,6 +481,14 @@
       text-align: center; flex-shrink: 0;
     }
     .gdm-body { flex: 1; overflow-y: auto; padding: 11px 14px 14px; }
+    .gdm-avg {
+      flex-shrink: 0; padding: 7px 14px 9px;
+      border-top: 1px solid rgba(138,222,40,0.15);
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: #3a5a3a; font-family: monospace;
+      text-align: center; min-height: 0;
+    }
+    .gdm-avg.has-data { color: #5a8a5a; }
     .gdm-select-all-row {
       display:flex; align-items:center; gap:8px; padding:3px 0 7px; border-bottom:1px solid #1a2a1a; margin-bottom:4px;
     }
@@ -697,6 +705,7 @@
     <div id="gdmProgress"></div>
     <div id="gdmElapsed"></div>
   </div>
+  <div id="gdmAvg" class="gdm-avg"></div>
 </div>
 
 <!-- ── Location Parser Sidebar ──────────────────────────────── -->
@@ -2094,6 +2103,20 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
     btn.disabled = checked === 0;
   }
 
+  function updateGdmAvgDisplay() {
+    var el = document.getElementById('gdmAvg');
+    if (!el) return;
+    var totalMs    = parseFloat(localStorage.getItem('kimball_gdm_total_ms')    || '0');
+    var totalShips = parseInt(localStorage.getItem('kimball_gdm_total_ships') || '0', 10);
+    if (!totalShips) { el.textContent = ''; el.classList.remove('has-data'); return; }
+    var avgSec = Math.round(totalMs / totalShips / 1000);
+    var mins = Math.floor(avgSec / 60);
+    var secs = avgSec % 60;
+    var label = mins > 0 ? mins + 'min ' + secs + 'sec' : secs + 'sec';
+    el.textContent = 'Avg update time/shipment: ' + label;
+    el.classList.add('has-data');
+  }
+
   window.refreshGdmPanel = function() {
     if (_globalUpdating) return;
     const listEl = document.getElementById('gdmShipList');
@@ -2127,6 +2150,7 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
     document.getElementById('gdmStatus').style.color = '';
     document.getElementById('gdmProgress').textContent = '';
     document.getElementById('gdmElapsed').textContent = '';
+    updateGdmAvgDisplay();
   };
 
   window.toggleGdmSelectAll = function(chk) {
@@ -2195,10 +2219,18 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
       }
 
       clearInterval(_gdmTimer);
-      var totalSec = ((performance.now() - _gdmStartTime) / 1000).toFixed(1);
-      var avgSec   = (parseFloat(totalSec) / selected.length).toFixed(1);
+      var elapsedMs = performance.now() - _gdmStartTime;
+      var totalSec  = (elapsedMs / 1000).toFixed(1);
+      var avgSec    = (elapsedMs / 1000 / selected.length).toFixed(1);
       document.getElementById('gdmElapsed').textContent =
         '⏱ ' + totalSec + 's total — avg ' + avgSec + 's per shipment';
+      if (updated > 0) {
+        var prevMs    = parseFloat(localStorage.getItem('kimball_gdm_total_ms')    || '0');
+        var prevShips = parseInt(localStorage.getItem('kimball_gdm_total_ships') || '0', 10);
+        localStorage.setItem('kimball_gdm_total_ms',    prevMs    + elapsedMs);
+        localStorage.setItem('kimball_gdm_total_ships', prevShips + updated);
+        updateGdmAvgDisplay();
+      }
       setGlobalUpdating(false);
       progress.textContent = '';
       if (failed === 0) {
