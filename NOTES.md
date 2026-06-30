@@ -11,11 +11,15 @@ A standalone HTML tool (`shipment-planner.html`) used by Global O-Ring to plan o
 ## How to deploy changes
 Edit `shipment-planner.html` locally, then push to the `master` branch. GitHub Pages updates automatically within a minute or two.
 
+For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && npx vercel --prod`
+
 ## What the tool does
 
 ### CSV Shipment Planner (main panel)
-- Drop or browse a sales order CSV (columns: Line, Item, Com, Price)
-- Splits committed lines into shipments of max 25 lines each
+- Drop or browse a sales order CSV exported from 10X ERP
+- Full CSV columns used: `Line, Notes, Image, Item, Description, UM, Ord, Com, Ship, SC, WO, BO, PO, TO, FO, Price, MP, Cost, MC, GP%, Total, Tax, Wanted Date, Open, Item Block`
+- Key columns: `Item`, `Com` (committed qty), `Price`, `Total` (pre-calculated line $), `Open` (Yes/No)
+- Splits committed lines (Com > 0) into shipments of max 25 lines each
 - **Simple mode** (< 50 committed lines): all lines go into standard shipments
 - **Full mode** (≥ 50 lines): separates autobagger-eligible items from standard items
 - Autobagger eligibility: item must match `KM-[MATERIAL][SIZE]/[QTY]`, material in `{N, C, V, BV, HSN, HNBR, QN}`, size in the standard AS568 size list, and Com > 30
@@ -23,6 +27,23 @@ Edit `shipment-planner.html` locally, then push to the `master` branch. GitHub P
 - Each shipment card shows Lines, Bags, Revenue and can be individually copied as a TSV row ready to paste into the ERP
 - "Copy All Shipments" copies all rows at once
 - Recently viewed orders are saved to localStorage (last 10)
+
+### Summary bar (top dashboard)
+- **Total Lines** — all lines in the CSV (open + closed), with `X OPEN · Y CLOSED` subtitle in cyan
+  - Open = `Open` column = "Yes" (still needs to ship or awaiting inventory)
+  - Closed = `Open` column = "No" (already shipped/fulfilled)
+- **Total Revenue** — sum of the `Total` column for ALL lines (open and closed), representing the full SO value once completely filled
+- **No Commit (Skipped)** — lines where Com = 0; these are open lines waiting on inventory availability
+- Full mode also shows Auto/Standard breakdowns (committed lines only)
+
+### Set Ship Date sidebar (middle panel)
+- Persistent sidebar panel between the main content and the Location Parser
+- Lists all shipments by number with checkboxes — select which ones to update
+- Shipment numbers auto-update in the list when edited in any card (no manual refresh needed)
+- Pick a date and click "Update Shipments" to PATCH `wantedDate` in the ERP for all selected shipments sequentially
+- Shows elapsed time ticker during updates and a per-shipment summary on completion
+- **Avg Update Time/Shipment** — lifetime average displayed at the bottom of the panel, persisted to Upstash Redis via `/api/stats` on the proxy; shared across all computers and browsers
+- Panel pulses with neon green glow while updates are in progress
 
 ### Location Parser (right sidebar)
 - Drop a Picking Slip PDF (uses PDF.js 3.11.174 via CDN)
@@ -39,7 +60,7 @@ Edit `shipment-planner.html` locally, then push to the `master` branch. GitHub P
 - "Copy Note" copies rich text (bold/italic preserved) for pasting directly into the ERP
 - "Autobag?" checkbox adds an auto-bag instruction to the note
 
-### Toolbar buttons (bottom of sidebar)
+### Toolbar buttons (top of Location Parser sidebar)
 - **Copy Date:** copies today's date + 7 days (MM/DD/YYYY) to clipboard
 - **Locations:** copies the location summary string (e.g. "19 VLM / 3 OVERFLOW / 1 KIT ROOM")
 
@@ -58,7 +79,7 @@ Edit `shipment-planner.html` locally, then push to the `master` branch. GitHub P
 
 ## ERP Date Integration
 
-Each shipment card has a **Set Date** button. Clicking it opens a modal where you pick a date, then click "Update ERP." This PATCHes the `wantedDate` field on every line in that shipment directly in the 10X ERP — controlling which lines print (and therefore ship).
+Each shipment card has a **Set Date** button. Clicking it opens a modal to pick a date and update one shipment. The **Set Ship Date** sidebar panel lets you update multiple shipments at once. Both PATCH `wantedDate` on all lines in the selected shipment(s) in 10X ERP.
 
 ### How it works
 - The HTML tool cannot call the ERP directly (CORS — the ERP returns no CORS headers)
@@ -77,11 +98,12 @@ Each shipment card has a **Set Date** button. Clicking it opens a modal where yo
 - **Local:** `C:\vinc_code\kimball-proxy`
 - **Deployed to:** Vercel personal account (vincglobal), NOT the company Vercel account
 - **API key:** stored in Vercel env as `ERP_API_KEY` — not visible in code or logs
+- **Stats endpoint:** `/api/stats` — GET returns `{ total_ms, total_ships }`; POST increments them. Backed by Upstash Redis (KV store connected to the kimball-proxy Vercel project, named `upstash-kv-beige-paddle`).
 
 ## Other UI details
 - CSV file loads immediately on drop, but is hidden behind an overlay until SO#, Customer PO#, and Ship To are all filled in — once they are, the overlay clears and the shipments render with those values applied
 - "Load New File" clears all three top fields and resets the tool
-- Shipment sequence numbers are editable — changing the first shipment's number cascades to all following ones
+- Shipment sequence numbers are editable — changing the first shipment's number cascades to all following ones; the Set Ship Date panel auto-updates to reflect any edits
 - TSV copy rows do NOT include the shipment number suffix (just `{SO#}-\t...`)
 
 ## Tech stack
@@ -89,3 +111,4 @@ Each shipment card has a **Set Date** button. Clicking it opens a modal where yo
 - PDF.js 3.11.174 (CDN) for picking slip parsing
 - Google Fonts: Lexend (loaded via CDN)
 - localStorage for recently viewed orders
+- Upstash Redis (via Vercel KV) for cross-device avg update time stat
