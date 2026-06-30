@@ -488,6 +488,7 @@
     .gdm-ship-item label { font-size:0.8rem; color:#ccc; cursor:pointer; flex:1; display:flex; justify-content:space-between; }
     .gdm-ship-item label span { color:#555; font-size:0.72rem; }
     #gdmProgress { font-size:0.75rem; color:#888f91; margin-top:6px; min-height:1em; font-family:monospace; }
+    #gdmElapsed  { font-size:0.72rem; color:#555; margin-top:4px; font-family:monospace; min-height:1em; }
 
     .shipment-num-input {
       background: none; border: none; border-bottom: 1px dashed #444;
@@ -2023,6 +2024,8 @@ function lpCopyDate7() {
   // ── Global date update ─────────────────────────────────────────
   let _globalUpdating = false;
   let _gdmBtns = []; // captured at modal-open time
+  let _gdmTimer = null;
+  let _gdmStartTime = 0;
 
   function setGlobalUpdating(on) {
     _globalUpdating = on;
@@ -2066,6 +2069,7 @@ function lpCopyDate7() {
     document.getElementById('gdmStatus').textContent = '';
     document.getElementById('gdmStatus').style.color = '';
     document.getElementById('gdmProgress').textContent = '';
+    document.getElementById('gdmElapsed').textContent = '';
     document.getElementById('gdmDate').value = '';
     document.getElementById('globalDateModal').classList.add('open');
     document.getElementById('gdmDate').focus();
@@ -2103,6 +2107,11 @@ function lpCopyDate7() {
       status.textContent = 'Starting…';
       status.style.color = '#888f91';
       setGlobalUpdating(true);
+      _gdmStartTime = performance.now();
+      _gdmTimer = setInterval(function() {
+        var s = ((performance.now() - _gdmStartTime) / 1000).toFixed(1);
+        document.getElementById('gdmElapsed').textContent = '⏱ ' + s + 's elapsed';
+      }, 100);
 
       const [y, m, d] = dateVal.split('-');
       const dateStr = m + '/' + d + '/' + y;
@@ -2137,18 +2146,24 @@ function lpCopyDate7() {
         } catch (err) { failed++; }
       }
 
+      clearInterval(_gdmTimer);
+      var totalSec = ((performance.now() - _gdmStartTime) / 1000).toFixed(1);
+      var avgSec   = (parseFloat(totalSec) / selected.length).toFixed(1);
+      document.getElementById('gdmElapsed').textContent =
+        '⏱ ' + totalSec + 's total — avg ' + avgSec + 's per shipment';
       setGlobalUpdating(false);
       progress.textContent = '';
       if (failed === 0) {
         status.textContent = 'All ' + updated + ' shipment' + (updated !== 1 ? 's' : '') + ' updated to ' + dateStr + '.';
         status.style.color = '#8ade28';
-        setTimeout(closeGlobalDateModal, 2200);
+        setTimeout(closeGlobalDateModal, 3000);
       } else {
         status.textContent = updated + ' updated, ' + failed + ' failed.';
         status.style.color = (failed === selected.length) ? '#ff6b6b' : '#ffaa00';
         submitBtn.disabled = false;
       }
     } catch (err) {
+      clearInterval(_gdmTimer);
       status.textContent = 'Error: ' + err.message;
       status.style.color = '#ff6b6b';
       setGlobalUpdating(false);
@@ -2268,6 +2283,7 @@ function lpCopyDate7() {
       </div>
       <div id="gdmStatus" style="margin-top:14px;font-size:0.8rem;min-height:1.2em;"></div>
       <div id="gdmProgress"></div>
+      <div id="gdmElapsed"></div>
     </div>
   </div>
 </div>  <!-- end #globalDateModal -->
