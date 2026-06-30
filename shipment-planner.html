@@ -281,6 +281,17 @@
     .erp-seg:nth-child(11) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.00s; }
     .erp-seg:nth-child(12) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.10s; }
 
+    /* Copy-date button (appears after date is set) */
+    .copy-date-btn {
+      display: none;
+      background: #1a2a1a; border: 1px solid rgba(138,222,40,0.4); color: #8ade28;
+      border-radius: 4px; padding: 5px 11px; cursor: pointer;
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em;
+      white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+    }
+    .copy-date-btn:hover { background: #1f2f1f; border-color: #8ade28; }
+    .copy-date-btn.copied { color: #fff; border-color: #8ade28; }
+
     /* Copy button */
     .copy-btn {
       background: #1e1e1e; border: 1px solid #2e2e2e; color: #888f91;
@@ -892,6 +903,7 @@ function renderShipment(rows, shipmentNum, isAuto) {
           data-linenos='${JSON.stringify(rows.map(r => r.line).filter(n => n != null))}'
           data-shipnum="${shipmentNum}"
           onclick="openDateModal(event, this)">Set Date</button>
+        <button class="copy-date-btn" onclick="copySetDate(event, this)">📋 Date</button>
         <button class="copy-btn"
           data-lines="${rows.length}" data-bags="${totalBags}"
           data-rev="${totalRev.toFixed(2)}" data-auto="${isAuto}"
@@ -1954,6 +1966,22 @@ function lpCopyDate7() {
     if (e.key === 'Escape' && !_updating) closeDateModal();
   });
 
+  window.copySetDate = function(evt, btn) {
+    evt.stopPropagation();
+    const setDateBtn = btn.previousElementSibling;
+    const date = setDateBtn && setDateBtn.dataset.setDate;
+    if (!date) return;
+    navigator.clipboard.writeText(date).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = date; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    });
+    btn.classList.add('copied');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  };
+
   window.submitDateUpdate = async function() {
     const dateVal = document.getElementById('dateModalInput').value;
     if (!dateVal) {
@@ -2012,8 +2040,14 @@ function lpCopyDate7() {
         status.textContent = json.updated + ' line' + (json.updated !== 1 ? 's' : '') + ' updated to ' + m + '/' + d + '/' + y + '.';
         status.style.color = '#8ade28';
         if (_activeBtn) {
+          const dateStr = m + '/' + d + '/' + y;
           _activeBtn.classList.add('success');
-          _activeBtn.textContent = m + '/' + d + '/' + y;
+          _activeBtn.textContent = dateStr;
+          _activeBtn.dataset.setDate = dateStr;
+          const copyDateBtn = _activeBtn.nextElementSibling;
+          if (copyDateBtn && copyDateBtn.classList.contains('copy-date-btn')) {
+            copyDateBtn.style.display = '';
+          }
           setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
         }
         setUpdating(false);
