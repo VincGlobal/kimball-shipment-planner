@@ -457,38 +457,60 @@
       50%       { border-color: rgba(138,222,40,0.75); }
     }
 
-    /* Global date modal */
-    #globalDateModal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; }
-    #globalDateModal.open { display:flex; }
-    #gdmWrap { display:flex; flex-direction:column; align-items:center; }
-    #gdmBanner { display:none; flex-direction:column; align-items:center; gap:10px; margin-bottom:16px; }
-    #gdmBanner.visible { display:flex; }
-    #gdmBannerText {
-      font-family:'Courier New',monospace; font-size:0.8rem; font-weight:700;
-      letter-spacing:0.13em; color:#00ff41; text-transform:uppercase;
-      animation: erp-text-pulse 1.2s ease-in-out infinite;
+    /* Set Ship Date panel (sidebar) */
+    #gdmPanel {
+      flex-shrink: 0;
+      border-top: 1px solid rgba(138,222,40,0.25);
+      padding: 11px 14px 14px;
+      background: #0e160e;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    #gdmBox {
-      background:#1a1a1a; border:1px solid rgba(0,191,255,0.5); border-radius:10px;
-      padding:24px 28px; min-width:360px; max-width:500px; width:100%;
+    #gdmPanel.erp-updating {
+      border-color: #00ff41;
+      animation: erp-neon-pulse 1.2s ease-in-out infinite;
     }
-    #gdmBox.erp-updating { border-color:#00ff41; animation:erp-neon-pulse 1.2s ease-in-out infinite; }
+    .gdm-panel-hdr {
+      font-size:0.64rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:0.1em; color:#8ade28; margin-bottom:8px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .gdm-refresh-btn {
+      background:none; border:1px solid #2a3a2a; color:#4a6a4a;
+      border-radius:3px; padding:1px 6px; cursor:pointer; font-size:0.8rem;
+      transition:all 0.15s; line-height:1.4;
+    }
+    .gdm-refresh-btn:hover { color:#8ade28; border-color:rgba(138,222,40,0.4); }
     .gdm-select-all-row {
-      display:flex; align-items:center; gap:8px; padding:4px 0 8px; border-bottom:1px solid #222; margin-bottom:6px;
+      display:flex; align-items:center; gap:8px; padding:3px 0 7px; border-bottom:1px solid #1a2a1a; margin-bottom:4px;
     }
-    .gdm-select-all-row input { accent-color:#00bfff; width:14px; height:14px; cursor:pointer; }
-    .gdm-select-all-row label { font-size:0.7rem; color:#888f91; text-transform:uppercase; letter-spacing:0.09em; cursor:pointer; user-select:none; }
-    .gdm-ship-list { max-height:200px; overflow-y:auto; margin-bottom:16px; display:flex; flex-direction:column; gap:2px; }
+    .gdm-select-all-row input { accent-color:#00bfff; width:13px; height:13px; cursor:pointer; }
+    .gdm-select-all-row label { font-size:0.68rem; color:#888f91; text-transform:uppercase; letter-spacing:0.09em; cursor:pointer; user-select:none; }
+    .gdm-ship-list { max-height:130px; overflow-y:auto; margin-bottom:10px; display:flex; flex-direction:column; gap:1px; }
     .gdm-ship-item {
-      display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:4px;
+      display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:4px;
       cursor:pointer; transition:background 0.12s;
     }
-    .gdm-ship-item:hover { background:#222; }
-    .gdm-ship-item input[type=checkbox] { accent-color:#00bfff; width:14px; height:14px; cursor:pointer; flex-shrink:0; }
-    .gdm-ship-item label { font-size:0.8rem; color:#ccc; cursor:pointer; flex:1; display:flex; justify-content:space-between; }
-    .gdm-ship-item label span { color:#555; font-size:0.72rem; }
-    #gdmProgress { font-size:0.75rem; color:#888f91; margin-top:6px; min-height:1em; font-family:monospace; }
-    #gdmElapsed  { font-size:0.72rem; color:#555; margin-top:4px; font-family:monospace; min-height:1em; }
+    .gdm-ship-item:hover { background:#1a2a1a; }
+    .gdm-ship-item input[type=checkbox] { accent-color:#00bfff; width:13px; height:13px; cursor:pointer; flex-shrink:0; }
+    .gdm-ship-item label { font-size:0.76rem; color:#ccc; cursor:pointer; flex:1; display:flex; justify-content:space-between; }
+    .gdm-ship-item label span { color:#444; font-size:0.68rem; }
+    .gdm-empty-note { font-size:0.72rem; color:#444; text-align:center; padding:10px 0; }
+    .gdm-date-input {
+      width:100%; background:#1e1e1e; border:1px solid #2e2e2e; border-radius:5px;
+      color:#fff; font-size:0.85rem; padding:6px 10px; font-family:inherit;
+      color-scheme:dark; margin-bottom:8px; display:block;
+    }
+    .gdm-submit-btn {
+      width:100%; background:#0d1f2a; color:#00bfff;
+      border:1px solid rgba(0,191,255,0.45); border-radius:5px;
+      padding:7px; cursor:pointer; font-size:0.72rem; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.07em; transition:all 0.15s;
+    }
+    .gdm-submit-btn:hover:not(:disabled) { background:#132030; }
+    .gdm-submit-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    #gdmStatus   { font-size:0.72rem; margin-top:7px; min-height:1em; }
+    #gdmProgress { font-size:0.72rem; color:#888f91; margin-top:3px; min-height:1em; font-family:monospace; }
+    #gdmElapsed  { font-size:0.68rem; color:#4a5a4a; margin-top:2px; font-family:monospace; min-height:1em; }
 
     .shipment-num-input {
       background: none; border: none; border-bottom: 1px dashed #444;
@@ -665,7 +687,6 @@
   </div>
   <div class="lp-footer">
     <div class="lp-footer-lbl">Tools</div>
-    <button class="lp-tool-btn green" onclick="openGlobalDateModal()">Set Dates</button>
     <button class="lp-tool-btn" id="lpDateBtn" onclick="lpCopyDate7()">Copy Date</button>
     <button class="lp-tool-btn" id="lpLocsBtn" onclick="lpCopyLocations()">Locations</button>
   </div>
@@ -722,6 +743,26 @@
     </div>
 
   </div><!-- end lp-body -->
+
+  <!-- Set Ship Date panel -->
+  <div id="gdmPanel">
+    <div class="gdm-panel-hdr">
+      📅 Set Ship Date
+      <button class="gdm-refresh-btn" onclick="refreshGdmPanel()" title="Refresh list">↺</button>
+    </div>
+    <div class="gdm-select-all-row">
+      <input type="checkbox" id="gdmSelectAll" checked onchange="toggleGdmSelectAll(this)">
+      <label for="gdmSelectAll">Select All</label>
+    </div>
+    <div id="gdmShipList" class="gdm-ship-list">
+      <div class="gdm-empty-note">Load a CSV to see shipments</div>
+    </div>
+    <input type="date" id="gdmDate" class="gdm-date-input">
+    <button id="gdmSubmit" class="gdm-submit-btn" onclick="submitGlobalDateUpdate()" disabled>Update Shipments</button>
+    <div id="gdmStatus"></div>
+    <div id="gdmProgress"></div>
+    <div id="gdmElapsed"></div>
+  </div>
 
 </div>
 </div><!-- end .content-row -->
@@ -1105,6 +1146,7 @@ function processCSV(text) {
   document.getElementById('dropZone').style.display = 'none';
   document.getElementById('loadNewBtn').style.display = 'inline-block';
   document.getElementById('copyAllBtn').style.display = 'inline-block';
+  if (typeof refreshGdmPanel === 'function') refreshGdmPanel();
 }
 
 function resetTool() {
@@ -2029,8 +2071,9 @@ function lpCopyDate7() {
 
   function setGlobalUpdating(on) {
     _globalUpdating = on;
-    document.getElementById('gdmBox').classList.toggle('erp-updating', on);
-    document.getElementById('gdmBanner').classList.toggle('visible', on);
+    document.getElementById('gdmPanel').classList.toggle('erp-updating', on);
+    document.getElementById('gdmSubmit').disabled = on;
+    document.getElementById('gdmDate').disabled = on;
   }
 
   function updateGdmSubmitLabel() {
@@ -2044,11 +2087,18 @@ function lpCopyDate7() {
     btn.disabled = checked === 0;
   }
 
-  window.openGlobalDateModal = function() {
+  window.refreshGdmPanel = function() {
+    if (_globalUpdating) return;
     const listEl = document.getElementById('gdmShipList');
     listEl.innerHTML = '';
     _gdmBtns = Array.from(document.querySelectorAll('.set-date-btn'));
     const soNum = (document.getElementById('soInput').value.trim() || '______');
+
+    if (!_gdmBtns.length) {
+      listEl.innerHTML = '<div class="gdm-empty-note">No shipments loaded yet</div>';
+      document.getElementById('gdmSubmit').disabled = true;
+      return;
+    }
 
     _gdmBtns.forEach(function(btn, i) {
       const card    = btn.closest('.shipment-card');
@@ -2070,15 +2120,6 @@ function lpCopyDate7() {
     document.getElementById('gdmStatus').style.color = '';
     document.getElementById('gdmProgress').textContent = '';
     document.getElementById('gdmElapsed').textContent = '';
-    document.getElementById('gdmDate').value = '';
-    document.getElementById('globalDateModal').classList.add('open');
-    document.getElementById('gdmDate').focus();
-  };
-
-  window.closeGlobalDateModal = function() {
-    if (_globalUpdating) return;
-    document.getElementById('globalDateModal').classList.remove('open');
-    setGlobalUpdating(false);
   };
 
   window.toggleGdmSelectAll = function(chk) {
@@ -2154,9 +2195,9 @@ function lpCopyDate7() {
       setGlobalUpdating(false);
       progress.textContent = '';
       if (failed === 0) {
-        status.textContent = 'All ' + updated + ' shipment' + (updated !== 1 ? 's' : '') + ' updated to ' + dateStr + '.';
+        status.textContent = '✓ All ' + updated + ' updated to ' + dateStr;
         status.style.color = '#8ade28';
-        setTimeout(closeGlobalDateModal, 3000);
+        setTimeout(function() { status.textContent = ''; status.style.color = ''; }, 4000);
       } else {
         status.textContent = updated + ' updated, ' + failed + ' failed.';
         status.style.color = (failed === selected.length) ? '#ff6b6b' : '#ffaa00';
@@ -2257,36 +2298,6 @@ function lpCopyDate7() {
   };
 })();
 </script>
-<!-- Global date update modal -->
-<div id="globalDateModal" onclick="if(event.target===this) closeGlobalDateModal()">
-  <div id="gdmWrap">
-    <div id="gdmBanner">
-      <div id="gdmBannerText">⚠ PLEASE WAIT: UPDATE IN PROGRESS</div>
-      <div class="erp-load-bar">
-        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
-        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
-        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
-        <div class="erp-seg"></div><div class="erp-seg"></div><div class="erp-seg"></div>
-      </div>
-    </div>
-    <div id="gdmBox">
-      <div class="date-modal-lbl">Set Ship Date — Select Shipments</div>
-      <div class="gdm-select-all-row">
-        <input type="checkbox" id="gdmSelectAll" checked onchange="toggleGdmSelectAll(this)">
-        <label for="gdmSelectAll">Select All</label>
-      </div>
-      <div id="gdmShipList" class="gdm-ship-list"></div>
-      <input type="date" id="gdmDate" style="width:100%;background:#1e1e1e;border:1px solid #2e2e2e;border-radius:5px;color:#fff;font-size:1rem;padding:8px 12px;font-family:inherit;color-scheme:dark;">
-      <div class="date-modal-actions" style="margin-top:14px;">
-        <button id="gdmSubmit" onclick="submitGlobalDateUpdate()" style="flex:1;background:#0d1f2a;color:#00bfff;border:1px solid rgba(0,191,255,0.45);border-radius:5px;padding:9px;cursor:pointer;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;">Update Shipments</button>
-        <button onclick="closeGlobalDateModal()" style="background:none;color:#444;border:1px solid #252525;border-radius:5px;padding:9px 18px;cursor:pointer;font-size:0.82rem;">Cancel</button>
-      </div>
-      <div id="gdmStatus" style="margin-top:14px;font-size:0.8rem;min-height:1.2em;"></div>
-      <div id="gdmProgress"></div>
-      <div id="gdmElapsed"></div>
-    </div>
-  </div>
-</div>  <!-- end #globalDateModal -->
 
 </body>
 </html>
