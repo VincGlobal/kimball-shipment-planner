@@ -2103,11 +2103,11 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
     btn.disabled = checked === 0;
   }
 
-  function updateGdmAvgDisplay() {
+  var STATS_PROXY = 'https://kimball-proxy.vercel.app/api/stats';
+
+  function renderGdmAvg(totalMs, totalShips) {
     var el = document.getElementById('gdmAvg');
     if (!el) return;
-    var totalMs    = parseFloat(localStorage.getItem('kimball_gdm_total_ms')    || '0');
-    var totalShips = parseInt(localStorage.getItem('kimball_gdm_total_ships') || '0', 10);
     if (!totalShips) { el.textContent = ''; el.classList.remove('has-data'); return; }
     var avgSec = Math.round(totalMs / totalShips / 1000);
     var mins = Math.floor(avgSec / 60);
@@ -2115,6 +2115,13 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
     var label = mins > 0 ? mins + 'min ' + secs + 'sec' : secs + 'sec';
     el.textContent = 'Avg update time/shipment: ' + label;
     el.classList.add('has-data');
+  }
+
+  function updateGdmAvgDisplay() {
+    fetch(STATS_PROXY)
+      .then(function(r) { return r.json(); })
+      .then(function(d) { renderGdmAvg(d.total_ms, d.total_ships); })
+      .catch(function() {});
   }
 
   window.refreshGdmPanel = function() {
@@ -2225,11 +2232,15 @@ document.getElementById('mainContent').addEventListener('input', function(e) {
       document.getElementById('gdmElapsed').textContent =
         '⏱ ' + totalSec + 's total — avg ' + avgSec + 's per shipment';
       if (updated > 0) {
-        var prevMs    = parseFloat(localStorage.getItem('kimball_gdm_total_ms')    || '0');
-        var prevShips = parseInt(localStorage.getItem('kimball_gdm_total_ships') || '0', 10);
-        localStorage.setItem('kimball_gdm_total_ms',    prevMs    + elapsedMs);
-        localStorage.setItem('kimball_gdm_total_ships', prevShips + updated);
-        updateGdmAvgDisplay();
+        fetch(STATS_PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ elapsed_ms: elapsedMs, updated_ships: updated }),
+        })
+          .then(function() { return fetch(STATS_PROXY); })
+          .then(function(r) { return r.json(); })
+          .then(function(d) { renderGdmAvg(d.total_ms, d.total_ships); })
+          .catch(function() {});
       }
       setGlobalUpdating(false);
       progress.textContent = '';
