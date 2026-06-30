@@ -2082,10 +2082,6 @@ function lpCopyDate7() {
     updateGdmSubmitLabel();
   };
 
-  document.getElementById('globalDateModal').addEventListener('click', function(e) {
-    if (e.target === this && !_globalUpdating) closeGlobalDateModal();
-  });
-
   window.submitGlobalDateUpdate = async function() {
     const status = document.getElementById('gdmStatus');
     try {
@@ -2247,7 +2243,7 @@ function lpCopyDate7() {
 })();
 </script>
 <!-- Global date update modal -->
-<div id="globalDateModal">
+<div id="globalDateModal" onclick="if(event.target===this) closeGlobalDateModal()">
   <div id="gdmWrap">
     <div id="gdmBanner">
       <div id="gdmBannerText">⚠ PLEASE WAIT: UPDATE IN PROGRESS</div>
