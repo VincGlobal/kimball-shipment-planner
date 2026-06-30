@@ -281,9 +281,8 @@
     .erp-seg:nth-child(11) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.00s; }
     .erp-seg:nth-child(12) { animation: erp-seg-wave 1.4s ease-in-out infinite 1.10s; }
 
-    /* Copy-date icon button (appears after date is set) */
+    /* Copy-date icon button (injected after date is set) */
     .copy-date-btn {
-      display: none;
       background: #252525; border: 1px solid #333; color: #888f91;
       border-radius: 6px; padding: 5px 7px; cursor: pointer;
       flex-shrink: 0; transition: all 0.15s; line-height: 0;
@@ -903,7 +902,6 @@ function renderShipment(rows, shipmentNum, isAuto) {
           data-linenos='${JSON.stringify(rows.map(r => r.line).filter(n => n != null))}'
           data-shipnum="${shipmentNum}"
           onclick="openDateModal(event, this)">Set Date</button>
-        <button class="copy-date-btn" title="Copy date" onclick="copySetDate(event, this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
         <button class="copy-btn"
           data-lines="${rows.length}" data-bags="${totalBags}"
           data-rev="${totalRev.toFixed(2)}" data-auto="${isAuto}"
@@ -2042,9 +2040,14 @@ function lpCopyDate7() {
           _activeBtn.classList.add('success');
           _activeBtn.textContent = dateStr;
           _activeBtn.dataset.setDate = dateStr;
-          const copyDateBtn = _activeBtn.nextElementSibling;
-          if (copyDateBtn && copyDateBtn.classList.contains('copy-date-btn')) {
-            copyDateBtn.style.display = 'inline-block';
+          // Inject copy-date button once, right after the set-date button
+          if (!_activeBtn.nextElementSibling || !_activeBtn.nextElementSibling.classList.contains('copy-date-btn')) {
+            const cb = document.createElement('button');
+            cb.className = 'copy-date-btn';
+            cb.title = 'Copy date';
+            cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+            cb.onclick = function(e) { copySetDate(e, this); };
+            _activeBtn.insertAdjacentElement('afterend', cb);
           }
           setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
         }
