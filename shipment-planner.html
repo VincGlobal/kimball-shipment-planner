@@ -1865,7 +1865,8 @@ function lpCopyDate7() {
     evt.stopPropagation();
     _activeBtn = btn;
     const soNum = document.getElementById('soInput').value.trim();
-    const shipNum = btn.dataset.shipnum;
+    const card = btn.closest('.shipment-card');
+    const shipNum = card ? card.querySelector('.shipment-num-input').value : btn.dataset.shipnum;
     document.getElementById('dateModalTitle').textContent =
       'Shipment ' + soNum + '-' + shipNum;
     const status = document.getElementById('dateModalStatus');
@@ -1944,11 +1945,12 @@ function lpCopyDate7() {
         status.textContent = json.updated + ' updated, ' + json.failed + ' failed.';
         status.style.color = '#ffaa00';
       } else {
-        status.textContent = json.updated + ' line' + (json.updated !== 1 ? 's' : '') + ' updated to ' + dateVal + '.';
+        status.textContent = json.updated + ' line' + (json.updated !== 1 ? 's' : '') + ' updated to ' + m + '/' + d + '/' + y + '.';
         status.style.color = '#8ade28';
         if (_activeBtn) {
           _activeBtn.classList.add('success');
-          _activeBtn.textContent = dateVal;
+          const [y, m, d] = dateVal.split('-');
+          _activeBtn.textContent = m + '/' + d + '/' + y;
           setTimeout(() => { _activeBtn.textContent = 'Set Date'; _activeBtn.classList.remove('success'); }, 4000);
         }
         setTimeout(closeDateModal, 1800);
