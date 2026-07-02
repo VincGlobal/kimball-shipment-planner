@@ -18,15 +18,20 @@ For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && n
 ### Open Order Picker (top bar)
 - On page load, fetches all open KIMMID orders live from the ERP via `/api/open-orders` on the proxy
 - Dropdown shows each order as: `829678  —  IM300868  —  4800 ROBERTS ROAD  (150 open / 288 lines)`
-- Selecting an order instantly fills **Sales Order #**, **Customer PO #**, and **Ship To**
+- Selecting an order instantly fills **Sales Order #**, **Customer PO #**, and **Ship To**, then automatically fetches and loads that order's line items via `/api/order-lines` on the proxy (see below) — no manual CSV export/drop needed for the common path
 - Ship To matching normalizes address abbreviations (ROAD→RD, BOULEVARD→BLVD, etc.) to match the hardcoded dropdown options
 - Falls back gracefully with a "Could not load orders" message if the proxy is unreachable
 - Proxy endpoint: `GET /api/open-orders` — queries ERP for `customer.customer=KIMMID&open=1`, returns `[{ orderNumber, po, address, openLines, totalLines }]`
 
+### Order Lines Auto-Load (replaces manual CSV export for the common path)
+- Proxy endpoint: `GET /api/order-lines?orderNumber={n}` — paginates through `/api/order_lines?order.orderNumber={n}` in the ERP (500/page) and returns `{ rows: [{ line, item, com, price, total, open }] }`
+- The tool converts those rows into the same minimal CSV shape (`Line,Item,Com,Price,Total,Open`) the manual export produces and feeds it straight into the existing `processCSV()` pipeline — same shipment-building/rendering code path regardless of source
+- Only these 6 columns are ever actually read by the tool's logic, even from a manually-exported CSV with all ~24 columns — everything else in that export (Notes, Image, UM, SC, WO, BO, PO, TO, FO, MP, Cost, MC, GP%, Tax, Wanted Date, Item Block) is cosmetic/unused
+- The order picker dropdown disables itself while the fetch is in flight and re-enables after
+
 ### CSV Shipment Planner (main panel)
-- Drop or browse a sales order CSV exported from 10X ERP
-- Full CSV columns used: `Line, Notes, Image, Item, Description, UM, Ord, Com, Ship, SC, WO, BO, PO, TO, FO, Price, MP, Cost, MC, GP%, Total, Tax, Wanted Date, Open, Item Block`
-- Key columns: `Item`, `Com` (committed qty), `Price`, `Total` (pre-calculated line $), `Open` (Yes/No)
+- The manual CSV drop zone is now a small fallback control next to the Open Order picker (not the full-page drop zone it used to be) — drop or browse a sales order CSV exported from 10X ERP (the download icon in the Line Items toolbar on the Sales Order detail page, `app.10xerp.com/sales-orders/{orderNumber}`)
+- Full CSV columns in that manual export: `Line, Notes, Image, Item, Description, UM, Ord, Com, Ship, SC, WO, BO, PO, TO, FO, Price, MP, Cost, MC, GP%, Total, Tax, Wanted Date, Open, Item Block` — but only `Item`, `Com` (committed qty), `Price`, `Total` (pre-calculated line $), `Open` (Yes/No), and `Line` are actually used (see above)
 - Splits committed lines (Com > 0) into shipments of max 25 lines each
 - **Simple mode** (< 50 committed lines): all lines go into standard shipments
 - **Full mode** (≥ 50 lines): separates autobagger-eligible items from standard items
@@ -34,7 +39,7 @@ For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && n
 - KIT and GAGE items are tracked separately (not counted in bag totals)
 - Each shipment card shows Lines, Bags, Revenue and can be individually copied as a TSV row ready to paste into the ERP
 - "Copy All Shipments" copies all rows at once
-- Recently viewed orders are saved to localStorage (last 10)
+- Recently viewed orders are saved to localStorage (last 10) — regardless of whether they were loaded via the order picker or a manual CSV drop
 
 ### Summary bar (top dashboard)
 - **Total Lines** — all lines in the CSV (open + closed), with `X OPEN · Y CLOSED` subtitle in cyan
@@ -97,7 +102,7 @@ Each shipment card has a **Set Date** button. Clicking it opens a modal to pick 
 - The proxy fetches all order lines from the ERP, finds the ones matching the line numbers, and PATCHes each one
 
 ### ERP details
-- **ERP:** 10X ERP (PHP/Symfony, API Platform) at `https://poc4.10xerp.com`
+- **ERP:** 10X ERP (PHP/Symfony, API Platform) at `https://app.10xerp.com` (production — migrated from the `poc4.10xerp.com` dev/sandbox environment on 2026-07-02; same API shape, just a different tenant + API key)
 - **Auth:** `X-Auth-Token: <key>` header
 - **Endpoint used:** `GET /api/order_lines?order.orderNumber={n}` to find lines, then `PATCH /api/order_lines/{id}` with `Content-Type: application/merge-patch+json` and body `{ "wantedDate": "YYYY-MM-DD" }`
 - The `line` column in the CSV maps directly to `order_line.line` in the ERP

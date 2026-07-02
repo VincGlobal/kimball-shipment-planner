@@ -160,6 +160,16 @@
     .drop-zone p { font-size: 0.82rem; color: #444; }
     .drop-zone input[type=file] { display: none; }
 
+    /* Compact fallback variant — lives in the top field row instead of taking over the page */
+    .drop-zone-compact {
+      display: flex; align-items: center; text-align: left;
+      padding: 10px 16px; border-radius: 8px; flex: 1 1 260px; max-width: 460px;
+    }
+    .drop-zone-compact .drop-zone-icon { margin-bottom: 0; margin-right: 12px; }
+    .drop-zone-compact .drop-zone-icon svg { width: 30px; height: 26px; }
+    .drop-zone-compact h2 { font-size: 0.8rem; margin-bottom: 1px; }
+    .drop-zone-compact p { font-size: 0.68rem; }
+
     /* ── Section dividers ────────────────────────────────── */
     .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; margin-top: 6px; }
     .section-header hr { flex: 1; border: none; border-top: 1px solid rgba(0,191,255,0.4); }
@@ -620,6 +630,21 @@
         </select>
         <style>#orderPicker:focus { outline:none; border-color:#00bfff; animation:none; } #orderPicker option { background:#1e1e1e; color:#fff; }</style>
       </div>
+      <div class="drop-zone drop-zone-compact" id="dropZone">
+        <div class="drop-zone-icon">
+          <svg width="30" height="26" viewBox="0 0 88 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 24 L10 70 L78 70 L78 24 L40 24 L35 14 L10 14 Z" fill="rgba(0,191,255,0.05)"/>
+            <path d="M10 14 L35 14 L40 24 L10 24 Z" fill="rgba(0,191,255,0.3)"/>
+            <rect x="10" y="24" width="68" height="46" stroke="#00bfff" stroke-width="1.7" fill="none"/>
+            <path d="M10 24 L10 14 L35 14 L40 24" stroke="#00bfff" stroke-width="1.7" fill="none"/>
+          </svg>
+        </div>
+        <div>
+          <h2>Drop sales order CSV</h2>
+          <p id="dropZoneMsg">fallback &middot; or click to browse</p>
+        </div>
+        <input type="file" id="fileInput" accept=".csv">
+      </div>
       <button id="copyAllBtn" onclick="copyAll()">Copy All Shipments</button>
     </div>
     <div style="margin-top:8px;">
@@ -642,46 +667,6 @@
 
 <div id="mainContent">
   <div class="container">
-
-    <div class="drop-zone" id="dropZone">
-      <div class="drop-zone-icon">
-        <svg width="88" height="78" viewBox="0 0 88 78" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="wf-glow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="2" result="blur"/>
-              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-          <path d="M10 24 L10 70 L78 70 L78 24 L40 24 L35 14 L10 14 Z" fill="rgba(0,191,255,0.05)"/>
-          <path d="M10 14 L35 14 L40 24 L10 24 Z" fill="rgba(0,191,255,0.3)"/>
-          <line x1="10" y1="36" x2="78" y2="36" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="10" y1="47" x2="78" y2="47" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="10" y1="58" x2="78" y2="58" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="27" y1="24" x2="27" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="44" y1="24" x2="44" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="61" y1="24" x2="61" y2="70" stroke="#00bfff" stroke-width="0.65" opacity="0.28"/>
-          <line x1="10" y1="19" x2="36" y2="19" stroke="#00bfff" stroke-width="0.65" opacity="0.2"/>
-          <line x1="22" y1="14" x2="22" y2="24" stroke="#00bfff" stroke-width="0.65" opacity="0.2"/>
-          <g filter="url(#wf-glow)">
-            <rect x="10" y="24" width="68" height="46" stroke="#00bfff" stroke-width="1.7" fill="none"/>
-            <path d="M10 24 L10 14 L35 14 L40 24" stroke="#00bfff" stroke-width="1.7" fill="none"/>
-          </g>
-          <line x1="5"  y1="24" x2="15" y2="24" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="10" y1="19" x2="10" y2="29" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="73" y1="24" x2="83" y2="24" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="78" y1="19" x2="78" y2="29" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="5"  y1="70" x2="15" y2="70" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="10" y1="65" x2="10" y2="75" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="73" y1="70" x2="83" y2="70" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="78" y1="65" x2="78" y2="75" stroke="#00bfff" stroke-width="1.1" opacity="0.65"/>
-          <line x1="5"  y1="14" x2="15" y2="14" stroke="#00bfff" stroke-width="0.9" opacity="0.5"/>
-          <line x1="10" y1="9"  x2="10" y2="19" stroke="#00bfff" stroke-width="0.9" opacity="0.5"/>
-        </svg>
-      </div>
-      <h2>Drop your sales order CSV here</h2>
-      <p id="dropZoneMsg">or click to browse</p>
-      <input type="file" id="fileInput" accept=".csv">
-    </div>
 
     <div id="results">
       <div id="autobaggerSection">
@@ -1177,7 +1162,6 @@ function processCSV(text) {
       : stdShipments.map((s, i) => renderShipment(s, autoShipments.length + i + 1, false)).join('');
 
   document.getElementById('results').classList.add('visible');
-  document.getElementById('dropZone').style.display = 'none';
   document.getElementById('loadNewBtn').style.display = 'inline-block';
   document.getElementById('copyAllBtn').style.display = 'inline-block';
   if (typeof refreshGdmPanel === 'function') refreshGdmPanel();
@@ -1897,6 +1881,52 @@ function lpCopyDate7() {
       .replace(/\bAVENUE\b/, 'AVE').replace(/\s+/g, ' ').trim();
   }
 
+  var ORDER_LINES_URL = 'https://kimball-proxy.vercel.app/api/order-lines';
+
+  function csvEscape(v) {
+    var s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function buildCSVFromRows(rows) {
+    var lines = ['Line,Item,Com,Price,Total,Open'];
+    rows.forEach(function(r) {
+      lines.push([
+        csvEscape(r.line != null ? r.line : ''),
+        csvEscape(r.item || ''),
+        csvEscape(r.com || 0),
+        csvEscape(r.price || 0),
+        csvEscape(r.total || 0),
+        csvEscape(r.open ? 'Yes' : 'No'),
+      ].join(','));
+    });
+    return lines.join('\n');
+  }
+
+  function loadOrderFromAPI(orderNumber) {
+    var sel = document.getElementById('orderPicker');
+    var prevLabel = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
+    sel.disabled = true;
+
+    fetch(ORDER_LINES_URL + '?orderNumber=' + encodeURIComponent(orderNumber))
+      .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+      .then(function(result) {
+        sel.disabled = false;
+        if (!result.ok || !result.data.rows) {
+          alert('Could not load line items from the ERP for order ' + orderNumber + '.\n' + (result.data.error || 'Unknown error'));
+          return;
+        }
+        _loadedCSV = buildCSVFromRows(result.data.rows);
+        if (typeof saveToRecent === 'function') saveToRecent(_loadedCSV);
+        processCSV(_loadedCSV);
+        if (typeof updateOverlay === 'function') updateOverlay();
+      })
+      .catch(function() {
+        sel.disabled = false;
+        alert('Could not reach the proxy to load order ' + orderNumber + ' — you can still drop the CSV manually.');
+      });
+  }
+
   fetch(OPEN_ORDERS_URL)
     .then(function(r) { return r.json(); })
     .then(function(orders) {
@@ -1949,6 +1979,7 @@ function lpCopyDate7() {
     }
 
     if (typeof updateOverlay === 'function') updateOverlay();
+    loadOrderFromAPI(o.orderNumber);
   };
 })();
 
