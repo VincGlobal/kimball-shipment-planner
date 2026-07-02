@@ -1154,12 +1154,12 @@ function processCSV(text) {
   document.getElementById('autobaggerShipments').innerHTML =
     autoShipments.length === 0
       ? '<p class="empty-note">No autobagger-eligible lines found.</p>'
-      : autoShipments.map((s, i) => renderShipment(s, i + 1, true)).join('');
+      : autoShipments.map((s, i) => renderShipment(s, _nextShipmentNum + i, true)).join('');
 
   document.getElementById('standardShipments').innerHTML =
     stdShipments.length === 0
       ? '<p class="empty-note">No standard lines with committed quantities.</p>'
-      : stdShipments.map((s, i) => renderShipment(s, autoShipments.length + i + 1, false)).join('');
+      : stdShipments.map((s, i) => renderShipment(s, _nextShipmentNum + autoShipments.length + i, false)).join('');
 
   document.getElementById('results').classList.add('visible');
   document.getElementById('loadNewBtn').style.display = 'inline-block';
@@ -1180,6 +1180,7 @@ function resetTool() {
   document.getElementById('poInput').value = '';
   document.getElementById('shipToInput').value = '';
   _loadedCSV = null;
+  _nextShipmentNum = 1;
   document.getElementById('fieldsOverlay').style.display = 'none';
   const lbl = document.getElementById('stdSectionLabel');
   lbl.textContent = 'Standard Shipments'; lbl.className = 'section-label color-std';
@@ -1277,10 +1278,14 @@ function openRecent(index) {
   const entry = getRecentList()[index];
   if (!entry) return;
   closeRecentPanel();
-  document.getElementById('soInput').value     = entry.soNum  === '—' ? '' : entry.soNum;
+  const soNum = entry.soNum === '—' ? '' : entry.soNum;
+  document.getElementById('soInput').value     = soNum;
   document.getElementById('poInput').value     = entry.poNum  === '—' ? '' : entry.poNum;
   document.getElementById('shipToInput').value = entry.shipTo === '—' ? '' : entry.shipTo;
-  processCSV(entry.csvText);
+  fetchNextShipmentNumber(soNum).then(n => {
+    _nextShipmentNum = n;
+    processCSV(entry.csvText);
+  });
 }
 
 document.addEventListener('click', e => {
@@ -1293,6 +1298,20 @@ updateRecentBtn();
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let _loadedCSV = null;
+let _nextShipmentNum = 1;
+
+const NEXT_SHIP_NUM_URL = 'https://kimball-proxy.vercel.app/api/next-shipment-number';
+
+// Looks up the next unused shipment number for a sales order (accounts for
+// deleted shipments too, since the ERP never reuses a number). Falls back
+// to 1 for a missing/unreachable order number so the tool still works.
+function fetchNextShipmentNumber(orderNumber) {
+  if (!orderNumber) return Promise.resolve(1);
+  return fetch(NEXT_SHIP_NUM_URL + '?orderNumber=' + encodeURIComponent(orderNumber))
+    .then(r => r.ok ? r.json() : { nextShipmentNumber: 1 })
+    .then(d => d.nextShipmentNumber || 1)
+    .catch(() => 1);
+}
 
 // ── Field gate overlay ────────────────────────────────────────────────────────
 function fieldsReady() {
@@ -1310,7 +1329,11 @@ function updateOverlay() {
     // If overlay was actively showing and fields just became complete, re-process
     // so card titles and TSV rows reflect the now-filled field values.
     if (_loadedCSV && ready && overlay.style.display === 'flex') {
-      processCSV(_loadedCSV);
+      const so = document.getElementById('soInput').value.trim();
+      fetchNextShipmentNumber(so).then(n => {
+        _nextShipmentNum = n;
+        processCSV(_loadedCSV);
+      });
     }
     overlay.style.display = 'none';
   } else {
@@ -1345,8 +1368,12 @@ function readFile(file) {
   reader.onload = e => {
     _loadedCSV = e.target.result;
     saveToRecent(_loadedCSV);
-    processCSV(_loadedCSV);
-    updateOverlay();
+    const so = document.getElementById('soInput').value.trim();
+    fetchNextShipmentNumber(so).then(n => {
+      _nextShipmentNum = n;
+      processCSV(_loadedCSV);
+      updateOverlay();
+    });
   };
   reader.readAsText(file);
 }
@@ -1905,18 +1932,23 @@ function lpCopyDate7() {
 
   function loadOrderFromAPI(orderNumber) {
     var sel = document.getElementById('orderPicker');
-    var prevLabel = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
     sel.disabled = true;
 
-    fetch(ORDER_LINES_URL + '?orderNumber=' + encodeURIComponent(orderNumber))
-      .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
-      .then(function(result) {
+    Promise.all([
+      fetch(ORDER_LINES_URL + '?orderNumber=' + encodeURIComponent(orderNumber))
+        .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); }),
+      fetchNextShipmentNumber(orderNumber),
+    ])
+      .then(function(results) {
+        var linesResult = results[0];
+        var nextNum = results[1];
         sel.disabled = false;
-        if (!result.ok || !result.data.rows) {
-          alert('Could not load line items from the ERP for order ' + orderNumber + '.\n' + (result.data.error || 'Unknown error'));
+        if (!linesResult.ok || !linesResult.data.rows) {
+          alert('Could not load line items from the ERP for order ' + orderNumber + '.\n' + (linesResult.data.error || 'Unknown error'));
           return;
         }
-        _loadedCSV = buildCSVFromRows(result.data.rows);
+        _nextShipmentNum = nextNum;
+        _loadedCSV = buildCSVFromRows(linesResult.data.rows);
         if (typeof saveToRecent === 'function') saveToRecent(_loadedCSV);
         processCSV(_loadedCSV);
         if (typeof updateOverlay === 'function') updateOverlay();

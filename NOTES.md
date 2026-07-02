@@ -49,6 +49,13 @@ For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && n
 - **No Commit (Skipped)** — lines where Com = 0; these are open lines waiting on inventory availability
 - Full mode also shows Auto/Standard breakdowns (committed lines only)
 
+### Auto Shipment Numbering
+- Shipment cards number themselves starting from the next unused number for that sales order in the ERP, instead of always starting at 1 — e.g. if 829678-1 through 829678-6 already exist (deleted or not), new cards start at 829678-7
+- Proxy endpoint: `GET /api/next-shipment-number?orderNumber={n}` — fetches `/api/order_shipments?order.orderNumber={n}` (paginated) and returns `{ nextShipmentNumber: maxRecordSequence + 1 }`
+- **Important:** `/api/order_shipments` includes soft-deleted shipments by default (no extra filter needed) — confirmed empirically against dev data. This matters because the ERP never reuses a shipment number even after deletion, so the max must be taken across all records, not just active ones
+- Looked up automatically whenever an order is loaded — via the Open Order picker (in parallel with the order-lines fetch), a dropped/browsed CSV (if Sales Order # is already filled), a Recently Viewed entry, or when the top fields transition from incomplete to complete. Falls back to starting at 1 if the order number is blank or the proxy is unreachable
+- Resets to 1 on "Load New File"
+
 ### Set Ship Date sidebar (middle panel)
 - Persistent sidebar panel between the main content and the Location Parser
 - Lists all shipments by number with checkboxes — select which ones to update
