@@ -18,6 +18,7 @@ For the proxy (`kimball-proxy`), deploy via: `cd C:\vinc_code\kimball-proxy && n
 ### Open Order Picker (top bar)
 - On page load, fetches all open KIMMID orders live from the ERP via `/api/open-orders` on the proxy
 - Dropdown shows each order as: `829678  —  IM300868  —  4800 ROBERTS ROAD  (150 open / 288 lines)`
+- **Grouped by ship-to address (A-Z), with orders sorted by order number ascending within each group.** Groups are separated by a thin blue divider line (a disabled `<option>` filled with a box-drawing character, since native `<select>` options don't support CSS borders reliably). Options keep their original array index as the `value` so `onOrderPick`'s `_orders[idx]` lookup still works after reordering
 - Selecting an order instantly fills **Sales Order #**, **Customer PO #**, and **Ship To**, then automatically fetches and loads that order's line items via `/api/order-lines` on the proxy (see below) — no manual CSV export/drop needed for the common path
 - Ship To matching normalizes address abbreviations (ROAD→RD, BOULEVARD→BLVD, etc.) to match the hardcoded dropdown options
 - Falls back gracefully with a "Could not load orders" message if the proxy is unreachable

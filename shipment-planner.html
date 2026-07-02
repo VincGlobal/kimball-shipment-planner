@@ -1966,9 +1966,32 @@ function lpCopyDate7() {
       var sel = document.getElementById('orderPicker');
       sel.innerHTML = '<option value="">— Select open order —</option>';
       sel.style.color = '#fff';
-      orders.forEach(function(o, i) {
+
+      // Group by ship-to address (A-Z), then order number ascending within
+      // each group. Options keep their ORIGINAL index as the value so
+      // onOrderPick's _orders[idx] lookup still works after reordering.
+      var indices = orders.map(function(o, i) { return i; });
+      indices.sort(function(a, b) {
+        var addrA = (orders[a].address || '').toUpperCase();
+        var addrB = (orders[b].address || '').toUpperCase();
+        if (addrA !== addrB) return addrA < addrB ? -1 : 1;
+        return orders[a].orderNumber - orders[b].orderNumber;
+      });
+
+      var prevAddress = null;
+      indices.forEach(function(idx) {
+        var o = orders[idx];
+        if (prevAddress !== null && o.address !== prevAddress) {
+          var divider = document.createElement('option');
+          divider.disabled = true;
+          divider.textContent = '─'.repeat(40);
+          divider.style.color = '#00bfff';
+          sel.appendChild(divider);
+        }
+        prevAddress = o.address;
+
         var opt = document.createElement('option');
-        opt.value = String(i);
+        opt.value = String(idx);
         opt.textContent = o.orderNumber + '  —  ' + o.po + '  —  ' + o.address
           + '  (' + o.openLines + ' open / ' + o.totalLines + ' lines)';
         sel.appendChild(opt);
